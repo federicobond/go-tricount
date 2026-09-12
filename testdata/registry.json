@@ -1,0 +1,126 @@
+{
+  "Response": [
+    {
+      "Registry": {
+        "id": 102257091,
+        "uuid": "034d1734-0000-4000-8000-000000000001",
+        "title": "Taiwan",
+        "description": "Spring trip",
+        "currency": "JPY",
+        "emoji": "🍜",
+        "category": "TRAVEL",
+        "status": "READ_WRITE",
+        "created": "2026-03-01 10:57:38.087586",
+        "public_identifier_token": "tABC123xyz",
+        "membership_uuid_active": "aaaaaaaa-0000-4000-8000-000000000001",
+        "memberships": [
+          {
+            "RegistryMembershipNonUser": {
+              "id": 438275026,
+              "uuid": "aaaaaaaa-0000-4000-8000-000000000001",
+              "status": "ACTIVE",
+              "alias": {
+                "display_name": "Alice",
+                "pointer": { "type": "UUID", "value": "aaaaaaaa-0000-4000-8000-000000000001", "name": "Alice" }
+              }
+            }
+          },
+          {
+            "RegistryMembershipNonUser": {
+              "id": 438275027,
+              "uuid": "bbbbbbbb-0000-4000-8000-000000000002",
+              "status": "ACTIVE",
+              "alias": {
+                "display_name": "Bob",
+                "pointer": { "type": "UUID", "value": "bbbbbbbb-0000-4000-8000-000000000002", "name": "Bob" }
+              }
+            }
+          }
+        ],
+        "all_registry_entry": [
+          {
+            "RegistryEntry": {
+              "id": 900000001,
+              "uuid": "cccccccc-0000-4000-8000-000000000003",
+              "date": "2026-03-02 12:00:00.000000",
+              "description": "Ramen",
+              "type": "MANUAL",
+              "type_transaction": "NORMAL",
+              "status": "ACTIVE",
+              "amount": { "value": "-507", "currency": "JPY" },
+              "category": "FOOD_AND_DRINK",
+              "membership_owned": {
+                "RegistryMembershipNonUser": {
+                  "id": 438275026,
+                  "uuid": "aaaaaaaa-0000-4000-8000-000000000001",
+                  "alias": { "display_name": "Alice" }
+                }
+              },
+              "allocations": [
+                {
+                  "amount": { "value": "-254", "currency": "JPY" },
+                  "type": "AMOUNT",
+                  "share_ratio": null,
+                  "membership": {
+                    "RegistryMembershipNonUser": { "uuid": "aaaaaaaa-0000-4000-8000-000000000001" }
+                  }
+                },
+                {
+                  "amount": { "value": "-253", "currency": "JPY" },
+                  "type": "AMOUNT",
+                  "share_ratio": null,
+                  "membership": {
+                    "RegistryMembershipNonUser": { "uuid": "bbbbbbbb-0000-4000-8000-000000000002" }
+                  }
+                }
+              ],
+              "attachment": []
+            }
+          },
+          {
+            "RegistryEntry": {
+              "id": 900000002,
+              "uuid": "dddddddd-0000-4000-8000-000000000004",
+              "date": "2026-03-03 09:30:00.000000",
+              "description": "Souvenir refund",
+              "type": "MANUAL",
+              "type_transaction": "INCOME",
+              "status": "ACTIVE",
+              "amount": { "value": "1000", "currency": "JPY" },
+              "amount_local": { "value": "220.00", "currency": "TWD" },
+              "exchange_rate": "4.5454",
+              "category": "OTHER",
+              "category_custom": "Souvenirs 🎁",
+              "membership_owned": {
+                "RegistryMembershipNonUser": { "uuid": "bbbbbbbb-0000-4000-8000-000000000002" }
+              },
+              "allocations": [
+                {
+                  "amount": { "value": "1000", "currency": "JPY" },
+                  "type": "AMOUNT",
+                  "membership": {
+                    "RegistryMembershipNonUser": { "uuid": "bbbbbbbb-0000-4000-8000-000000000002" }
+                  }
+                }
+              ],
+              "attachment": [{ "id": 12345 }]
+            }
+          }
+        ],
+        "all_registry_gallery_attachment": [
+          {
+            "RegistryGalleryAttachment": {
+              "membership_uuid": "aaaaaaaa-0000-4000-8000-000000000001",
+              "attachment": {
+                "id": 12345,
+                "uuid": "eeeeeeee-0000-4000-8000-000000000005",
+                "content_type": "image/jpeg",
+                "urls": [{ "type": "ORIGINAL", "url": "https://example.invalid/img.jpg" }]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
