@@ -239,16 +239,63 @@ func (a *app) show(args []string) error {
 		fmt.Fprintf(w, "  %s\t(removed)\n", m.DisplayName)
 	}
 
-	fmt.Fprintln(w, "\nTRANSACTIONS\n  DATE\tDESCRIPTION\tAMOUNT\tPAID BY")
+	// A column per member, because a total and a payer say nothing about how
+	// a transaction was divided: shares are rarely equal, allocation types
+	// can be mixed within one transaction, and a transaction often leaves
+	// somebody out entirely. Showing each resolved share needs no guessing
+	// about which of those is the case.
+	columns := splitColumns(t)
+
+	header := "\nTRANSACTIONS\n  DATE\tDESCRIPTION\tAMOUNT\tPAID BY"
+	for _, m := range columns {
+		header += "\t" + m.DisplayName
+	}
+	fmt.Fprintln(w, header)
+
 	for _, tx := range t.Transactions {
 		payer := "?"
 		if m := t.MemberByUUID(tx.PayerUUID); m != nil {
 			payer = m.DisplayName
 		}
-		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\n",
+		row := fmt.Sprintf("  %s\t%s\t%s\t%s",
 			tx.Date.Format("2006-01-02"), tx.Description, tx.Amount, payer)
+
+		shares := make(map[string]string, len(tx.Allocations))
+		for _, a := range tx.Allocations {
+			shares[a.MemberUUID] = a.Amount.String()
+		}
+		for _, m := range columns {
+			// An empty cell means this member was not part of the split,
+			// which is different from a share of zero.
+			row += "\t" + shares[m.UUID]
+		}
+		fmt.Fprintln(w, row)
 	}
 	return w.Flush()
+}
+
+// splitColumns is the members a transaction table needs a column for: every
+// active member, plus any former member still named by an allocation, so a
+// removed person's old shares do not vanish from the table.
+func splitColumns(t *tricount.Tricount) []*tricount.Member {
+	columns := append([]*tricount.Member(nil), t.Members...)
+
+	seen := make(map[string]bool, len(columns))
+	for _, m := range columns {
+		seen[m.UUID] = true
+	}
+	for _, tx := range t.Transactions {
+		for _, a := range tx.Allocations {
+			if seen[a.MemberUUID] {
+				continue
+			}
+			seen[a.MemberUUID] = true
+			if m := t.MemberByUUID(a.MemberUUID); m != nil {
+				columns = append(columns, m)
+			}
+		}
+	}
+	return columns
 }
 
 func (a *app) balances(args []string) error {

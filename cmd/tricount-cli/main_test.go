@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -312,4 +313,102 @@ func TestSettleJSON(t *testing.T) {
 	if len(got) != 1 || got[0].From != "Bob" || got[0].To != "Alice" || got[0].Amount.Value != "253" {
 		t.Errorf("got %+v", got)
 	}
+}
+
+// cells splits a rendered table line on runs of two or more spaces, which is
+// how tabwriter separates columns.
+func cells(line string) []string {
+	var out []string
+	for _, c := range regexp.MustCompile(`\s{2,}`).Split(strings.TrimSpace(line), -1) {
+		out = append(out, strings.TrimSpace(c))
+	}
+	return out
+}
+
+// findRow returns the cells of the first line whose first non-empty cell
+// matches, or nil.
+func findRow(out, contains string) []string {
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, contains) {
+			return cells(line)
+		}
+	}
+	return nil
+}
+
+func TestShowGivesEachMemberAColumn(t *testing.T) {
+	a, stdout, stderr := fixtureApp(t)
+	if code := a.run([]string{"show", "102257091"}); code != 0 {
+		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
+	}
+	out := stdout.String()
+
+	header := findRow(out, "DESCRIPTION")
+	if header == nil {
+		t.Fatalf("no transaction header:\n%s", out)
+	}
+	// DATE DESCRIPTION AMOUNT PAID BY, then one column per member.
+	want := []string{"DATE", "DESCRIPTION", "AMOUNT", "PAID BY", "Alice", "Bob"}
+	if len(header) != len(want) {
+		t.Fatalf("header = %q, want %q", header, want)
+	}
+	for i := range want {
+		if header[i] != want[i] {
+			t.Errorf("header[%d] = %q, want %q", i, header[i], want[i])
+		}
+	}
+
+	headerLine := lineContaining(out, "DESCRIPTION")
+
+	// Ramen: Alice paid 507, split 254 to Alice and 253 to Bob.
+	ramen := lineContaining(out, "Ramen")
+	if got := under(headerLine, ramen, "Alice"); got != "254" {
+		t.Errorf("Ramen, Alice = %q, want \"254\"", got)
+	}
+	if got := under(headerLine, ramen, "Bob"); got != "253" {
+		t.Errorf("Ramen, Bob = %q, want \"253\"", got)
+	}
+
+	// The income is allocated to Bob alone, so Alice's cell must be empty —
+	// that is the case the old table could not show. An empty cell is not
+	// the same as a share of zero.
+	refund := lineContaining(out, "Souvenir refund")
+	if got := under(headerLine, refund, "Alice"); got != "" {
+		t.Errorf("refund, Alice = %q, want an empty cell", got)
+	}
+	if got := under(headerLine, refund, "Bob"); got != "1000" {
+		t.Errorf("refund, Bob = %q, want \"1000\"", got)
+	}
+}
+
+func lineContaining(out, want string) string {
+	for _, line := range strings.Split(out, "\n") {
+		if strings.Contains(line, want) {
+			return line
+		}
+	}
+	return ""
+}
+
+// under returns the cell of row sitting beneath the named column of header.
+// tabwriter aligns columns, so a column's start offset in the header is where
+// its cells begin — which is the only way to see a cell that is empty.
+func under(header, row, column string) string {
+	start := strings.Index(header, column)
+	if start < 0 {
+		return "<no such column>"
+	}
+	end := len(row)
+	// The next column begins at the next run of two spaces after start.
+	if rest := header[start+len(column):]; true {
+		if off := regexp.MustCompile(`\s{2,}\S`).FindStringIndex(rest); off != nil {
+			if n := start + len(column) + off[1] - 1; n < end {
+				end = n
+			}
+		}
+	}
+	if start >= len(row) {
+		return ""
+	}
+	return strings.TrimSpace(row[start:end])
 }
