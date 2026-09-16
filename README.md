@@ -47,6 +47,28 @@ balances, err := t.Balances()
 See [`example_test.go`](example_test.go) for ratio and exact splits, income,
 reimbursements, foreign currency, attachments, settling up and error handling.
 
+## Command line
+
+```bash
+go install github.com/federicobond/go-tricount/cmd/tricount-cli@latest
+```
+
+```
+tricount-cli join tABC123xyz     # follow a tricount by its sharing token
+tricount-cli list                # what this device follows, with ids
+tricount-cli show <id>           # members and transactions
+tricount-cli balances <id>       # each member's net position
+tricount-cli settle <id>         # transfers that clear every balance
+tricount-cli link <id> <name>    # set which member this device counts as
+tricount-cli whoami              # this device's identity and its links
+```
+
+Every command takes `--json`. Amounts encode as strings, so exact decimals
+survive a trip through `jq`.
+
+The device identity lives in `~/.config/tricount/credentials.json`, created on
+first use and overridable with `--credentials` or `$TRICOUNT_CREDENTIALS`.
+
 ## There is no login
 
 Tricount has no email-and-password authentication. The client registers an

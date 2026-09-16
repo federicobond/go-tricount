@@ -218,9 +218,10 @@ func (c *Client) JoinTricount(ctx context.Context, publicToken string) (*Tricoun
 		publicToken, ErrNotFound)
 }
 
-// SyncTricounts sets which tricounts this device follows, by sharing token,
-// and returns them partitioned into active and archived. Passing no tokens at
-// all returns the current state without changing it.
+// SyncTricounts adds tricounts to the set this device follows, by sharing
+// token, and returns everything it follows, partitioned into active and
+// archived. The lists are deltas: tricounts not named here are left alone.
+// Passing no tokens returns the current state without changing it.
 func (c *Client) SyncTricounts(ctx context.Context, active, archived []string) (*SyncResult, error) {
 	return c.sync(ctx, wireSyncRequest{
 		AllRegistryActive:   syncRefs(active),
