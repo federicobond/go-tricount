@@ -55,19 +55,23 @@ go install github.com/federicobond/go-tricount/cmd/tricount-cli@latest
 
 ```
 tricount-cli join tABC123xyz     # follow a tricount by its sharing token
+tricount-cli join tABC --as Ana  # ... and be Ana, creating her if needed
 tricount-cli list                # what this device follows, with ids
 tricount-cli show <id>           # members and transactions
 tricount-cli balances <id>       # each member's net position
 tricount-cli settle <id>         # transfers that clear every balance
 tricount-cli link <id> <name>    # set which member this device counts as
+tricount-cli link --create <id> <name>   # ... adding them if they do not exist
 tricount-cli whoami              # this device's identity and its links
 ```
 
 Every command takes `--json`. Amounts encode as strings, so exact decimals
 survive a trip through `jq`.
 
-The device identity lives in `~/.config/tricount/credentials.json`, created on
-first use and overridable with `--credentials` or `$TRICOUNT_CREDENTIALS`.
+The device identity is created on first use in your OS config directory —
+`~/Library/Application Support/tricount/credentials.json` on macOS,
+`~/.config/tricount/credentials.json` on Linux — and `$TRICOUNT_CREDENTIALS`
+overrides it. `tricount-cli whoami` prints the path it is using.
 
 ## There is no login
 

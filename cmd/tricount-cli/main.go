@@ -1,9 +1,11 @@
 // Command tricount-cli inspects tricounts and provisions the device that
 // reads them.
 //
-// There is no login. The first run generates a device identity and saves it,
-// by default to ~/.config/tricount/credentials.json; keep that file, because
-// it is what your synced tricounts hang off.
+// There is no login. The first run generates a device identity and saves it
+// under the OS config directory — ~/Library/Application Support/tricount on
+// macOS, ~/.config/tricount on Linux — or wherever $TRICOUNT_CREDENTIALS
+// points. Keep that file: it is what your synced tricounts hang off, and
+// whoami prints its path.
 //
 // Usage:
 //
@@ -49,8 +51,8 @@ func main() {
 	os.Exit(a.run(os.Args[1:]))
 }
 
-// defaultCredentialsPath is ~/.config/tricount/credentials.json, overridable
-// by TRICOUNT_CREDENTIALS.
+// defaultCredentialsPath is credentials.json under the OS config directory,
+// overridable by TRICOUNT_CREDENTIALS.
 func defaultCredentialsPath() string {
 	if p := os.Getenv("TRICOUNT_CREDENTIALS"); p != "" {
 		return p
@@ -100,8 +102,9 @@ commands:
   balances <id>     each member's net position
   settle <id>       a plan of transfers that clears every balance
   join <token>      follow a tricount, by the tXXXX part of its sharing link
+                    --as <name> to be that member, created if absent
   leave <id>        stop following a tricount
-  link <id> <name>  set which member this device counts as
+  link <id> <name>  set which member this device counts as, --create to add them
   whoami            this device's identity and its member in each tricount
 `)
 }
@@ -312,26 +315,43 @@ func (a *app) settle(args []string) error {
 
 func (a *app) join(args []string) error {
 	fs := a.flags("join")
+	as := fs.String("as", "", "the member this device counts as, created if absent")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return fmt.Errorf("usage: tricount-cli join <token>")
+		return fmt.Errorf("usage: tricount-cli join [--as <name>] <token>")
 	}
 
 	c, err := a.client()
 	if err != nil {
 		return err
 	}
-	t, err := c.JoinTricount(context.Background(), fs.Arg(0))
+	ctx := context.Background()
+	t, err := c.JoinTricount(ctx, fs.Arg(0))
 	if err != nil {
 		return err
 	}
 	fmt.Fprintf(a.stdout, "joined %d %s (%s)\n", t.ID, t.Title, t.Currency)
-	if me := t.LinkedMember(); me != nil {
-		fmt.Fprintf(a.stdout, "this device is %s; `tricount-cli link %d <name>` to change it\n",
-			me.DisplayName, t.ID)
+
+	// Joining auto-links to the member with the lowest id, which is whoever
+	// happened to be created first rather than whoever is holding this device.
+	if *as == "" {
+		if me := t.LinkedMember(); me != nil {
+			fmt.Fprintf(a.stdout, "this device is %s; `tricount-cli link %d <name>` to change it\n",
+				me.DisplayName, t.ID)
+		}
+		return nil
 	}
+
+	m, err := memberFor(ctx, c, t, *as, true)
+	if err != nil {
+		return err
+	}
+	if err := c.LinkToMember(ctx, t, m); err != nil {
+		return err
+	}
+	fmt.Fprintf(a.stdout, "this device is now %s\n", m.DisplayName)
 	return nil
 }
 
@@ -353,13 +373,17 @@ func (a *app) leave(args []string) error {
 
 // resolveMember finds a member by display name, case-insensitively. Unlike
 // Tricount.MemberByName it refuses to pick when a name is ambiguous.
-func resolveMember(t *tricount.Tricount, name string) (*tricount.Member, error) {
-	var matches []*tricount.Member
+func resolveMemberMatches(t *tricount.Tricount, name string) (matches []*tricount.Member, ambiguous bool) {
 	for _, m := range t.Members {
 		if strings.EqualFold(m.DisplayName, name) {
 			matches = append(matches, m)
 		}
 	}
+	return matches, len(matches) > 1
+}
+
+func resolveMember(t *tricount.Tricount, name string) (*tricount.Member, error) {
+	matches, _ := resolveMemberMatches(t, name)
 	switch len(matches) {
 	case 1:
 		return matches[0], nil
@@ -368,7 +392,7 @@ func resolveMember(t *tricount.Tricount, name string) (*tricount.Member, error) 
 		for _, m := range t.Members {
 			names = append(names, m.DisplayName)
 		}
-		return nil, fmt.Errorf("no member called %q; this tricount has %s",
+		return nil, fmt.Errorf("no member called %q; this tricount has %s. Use --create to add them",
 			name, strings.Join(names, ", "))
 	default:
 		uuids := make([]string, 0, len(matches))
@@ -380,13 +404,34 @@ func resolveMember(t *tricount.Tricount, name string) (*tricount.Member, error) 
 	}
 }
 
+// memberFor resolves name to a member, creating it when create is set and no
+// member has that name.
+func memberFor(ctx context.Context, c *tricount.Client, t *tricount.Tricount, name string, create bool) (*tricount.Member, error) {
+	m, err := resolveMember(t, name)
+	if err == nil {
+		return m, nil
+	}
+	if !create {
+		return nil, err
+	}
+	// Only an absent name is worth creating; an ambiguous one still is not.
+	if _, ambiguous := resolveMemberMatches(t, name); ambiguous {
+		return nil, err
+	}
+	if err := c.AddMembers(ctx, t, name); err != nil {
+		return nil, err
+	}
+	return resolveMember(t, name)
+}
+
 func (a *app) link(args []string) error {
 	fs := a.flags("link")
+	create := fs.Bool("create", false, "add the member if no one by that name exists")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() != 2 {
-		return fmt.Errorf("usage: tricount-cli link <id> <member>")
+		return fmt.Errorf("usage: tricount-cli link [--create] <id> <member>")
 	}
 	id, err := strconv.ParseInt(fs.Arg(0), 10, 64)
 	if err != nil {
@@ -402,7 +447,7 @@ func (a *app) link(args []string) error {
 	if err != nil {
 		return err
 	}
-	m, err := resolveMember(t, fs.Arg(1))
+	m, err := memberFor(ctx, c, t, fs.Arg(1), *create)
 	if err != nil {
 		return err
 	}
