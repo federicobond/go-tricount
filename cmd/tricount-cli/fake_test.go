@@ -199,3 +199,105 @@ func TestLinkWithoutCreateStillRefusesUnknownMember(t *testing.T) {
 		t.Errorf("the error should mention --create: %q", stderr.String())
 	}
 }
+
+// stdoutOf runs a command and returns what it wrote, failing on a bad exit.
+func stdoutOf(t *testing.T, a *app, stderr *strings.Builder, args ...string) string {
+	t.Helper()
+	buf := &strings.Builder{}
+	a.stdout = buf
+	if code := a.run(args); code != 0 {
+		t.Fatalf("%v: exit code = %d, stderr = %q", args, code, stderr.String())
+	}
+	return buf.String()
+}
+
+func TestJoinJSONEmitsTheTricount(t *testing.T) {
+	a, _, stderr := newFakeApp(t)
+	out := stdoutOf(t, a, stderr, "join", "--json", "tABC123xyz")
+
+	var got struct {
+		ID    int64  `json:"ID"`
+		Title string `json:"Title"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not valid JSON: %v\n%s", err, out)
+	}
+	if got.ID != fakeTricountID || got.Title != "Taiwan" {
+		t.Errorf("got %+v", got)
+	}
+}
+
+func TestJoinAsJSONReflectsTheNewLink(t *testing.T) {
+	a, f, stderr := newFakeApp(t)
+	out := stdoutOf(t, a, stderr, "join", "--json", "--as", "Carol", "tABC123xyz")
+
+	var got struct {
+		LinkedMemberUUID string `json:"LinkedMemberUUID"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not valid JSON: %v\n%s", err, out)
+	}
+	carol, ok := f.memberNamed("Carol")
+	if !ok {
+		t.Fatal("Carol was not created")
+	}
+	if got.LinkedMemberUUID != carol.UUID {
+		t.Errorf("LinkedMemberUUID = %q, want Carol's %q", got.LinkedMemberUUID, carol.UUID)
+	}
+}
+
+func TestLinkJSONEmitsTheMember(t *testing.T) {
+	a, _, stderr := newFakeApp(t)
+	out := stdoutOf(t, a, stderr, "link", "--json", fmt.Sprint(fakeTricountID), "Bob")
+
+	var got struct {
+		UUID        string `json:"UUID"`
+		DisplayName string `json:"DisplayName"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not valid JSON: %v\n%s", err, out)
+	}
+	if got.DisplayName != "Bob" || got.UUID == "" {
+		t.Errorf("got %+v", got)
+	}
+}
+
+func TestLeaveJSONEmitsTheTricountLeft(t *testing.T) {
+	a, _, stderr := newFakeApp(t)
+	out := stdoutOf(t, a, stderr, "leave", "--json", fmt.Sprint(fakeTricountID))
+
+	var got struct {
+		ID int64 `json:"ID"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not valid JSON: %v\n%s", err, out)
+	}
+	if got.ID != fakeTricountID {
+		t.Errorf("ID = %d, want %d", got.ID, fakeTricountID)
+	}
+}
+
+func TestWhoamiJSONCarriesIdentityAndLinks(t *testing.T) {
+	a, _, stderr := newFakeApp(t)
+	out := stdoutOf(t, a, stderr, "whoami", "--json")
+
+	var got struct {
+		Device      string `json:"device"`
+		User        int64  `json:"user"`
+		Credentials string `json:"credentials"`
+		Tricounts   []struct {
+			ID       int64  `json:"id"`
+			Title    string `json:"title"`
+			LinkedAs string `json:"linked_as"`
+		} `json:"tricounts"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("not valid JSON: %v\n%s", err, out)
+	}
+	if got.Device == "" || got.User == 0 || got.Credentials == "" {
+		t.Errorf("identity fields are incomplete: %+v", got)
+	}
+	if len(got.Tricounts) != 1 || got.Tricounts[0].Title != "Taiwan" || got.Tricounts[0].LinkedAs != "Alice" {
+		t.Errorf("tricounts = %+v", got.Tricounts)
+	}
+}

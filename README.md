@@ -65,8 +65,11 @@ tricount-cli link --create <id> <name>   # ... adding them if they do not exist
 tricount-cli whoami              # this device's identity and its links
 ```
 
-Every command takes `--json`. Amounts encode as strings, so exact decimals
-survive a trip through `jq`.
+Every command takes `--json`. Read commands emit their data; the ones that
+change something emit what they acted on, so `join --json` gives you the
+tricount and `link --json` the member. Amounts encode as strings, so exact
+decimals survive a trip through `jq`. Errors stay plain text on stderr — the
+exit code is the contract.
 
 The device identity is created on first use in your OS config directory —
 `~/Library/Application Support/tricount/credentials.json` on macOS,

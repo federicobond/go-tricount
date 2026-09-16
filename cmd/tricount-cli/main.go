@@ -332,26 +332,32 @@ func (a *app) join(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(a.stdout, "joined %d %s (%s)\n", t.ID, t.Title, t.Currency)
 
 	// Joining auto-links to the member with the lowest id, which is whoever
 	// happened to be created first rather than whoever is holding this device.
-	if *as == "" {
-		if me := t.LinkedMember(); me != nil {
+	if *as != "" {
+		m, err := memberFor(ctx, c, t, *as, true)
+		if err != nil {
+			return err
+		}
+		if err := c.LinkToMember(ctx, t, m); err != nil {
+			return err
+		}
+	}
+
+	if a.jsonOut {
+		return a.encode(t)
+	}
+
+	fmt.Fprintf(a.stdout, "joined %d %s (%s)\n", t.ID, t.Title, t.Currency)
+	if me := t.LinkedMember(); me != nil {
+		if *as != "" {
+			fmt.Fprintf(a.stdout, "this device is now %s\n", me.DisplayName)
+		} else {
 			fmt.Fprintf(a.stdout, "this device is %s; `tricount-cli link %d <name>` to change it\n",
 				me.DisplayName, t.ID)
 		}
-		return nil
 	}
-
-	m, err := memberFor(ctx, c, t, *as, true)
-	if err != nil {
-		return err
-	}
-	if err := c.LinkToMember(ctx, t, m); err != nil {
-		return err
-	}
-	fmt.Fprintf(a.stdout, "this device is now %s\n", m.DisplayName)
 	return nil
 }
 
@@ -366,6 +372,9 @@ func (a *app) leave(args []string) error {
 	}
 	if err := c.LeaveTricount(context.Background(), t); err != nil {
 		return err
+	}
+	if a.jsonOut {
+		return a.encode(t)
 	}
 	fmt.Fprintf(a.stdout, "left %d %s; rejoining with its sharing token restores access\n", t.ID, t.Title)
 	return nil
@@ -454,6 +463,9 @@ func (a *app) link(args []string) error {
 	if err := c.LinkToMember(ctx, t, m); err != nil {
 		return err
 	}
+	if a.jsonOut {
+		return a.encode(m)
+	}
 	fmt.Fprintf(a.stdout, "this device is now %s in %s\n", m.DisplayName, t.Title)
 	return nil
 }
@@ -473,12 +485,34 @@ func (a *app) whoami(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprintf(a.stdout, "device %s (user %d)\ncredentials %s\n\n", creds.AppID, userID, a.credPath)
-
 	all, err := c.ListTricounts(ctx)
 	if err != nil {
 		return err
 	}
+
+	if a.jsonOut {
+		type link struct {
+			ID       int64  `json:"id"`
+			Title    string `json:"title"`
+			LinkedAs string `json:"linked_as"`
+		}
+		out := struct {
+			Device      string `json:"device"`
+			User        int64  `json:"user"`
+			Credentials string `json:"credentials"`
+			Tricounts   []link `json:"tricounts"`
+		}{Device: creds.AppID, User: userID, Credentials: a.credPath, Tricounts: []link{}}
+		for _, t := range all {
+			var name string
+			if m := t.LinkedMember(); m != nil {
+				name = m.DisplayName
+			}
+			out.Tricounts = append(out.Tricounts, link{t.ID, t.Title, name})
+		}
+		return a.encode(out)
+	}
+
+	fmt.Fprintf(a.stdout, "device %s (user %d)\ncredentials %s\n\n", creds.AppID, userID, a.credPath)
 	w := tabwriter.NewWriter(a.stdout, 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tTRICOUNT\tLINKED AS")
 	for _, t := range all {
