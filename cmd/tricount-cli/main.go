@@ -170,10 +170,10 @@ func (a *app) list(args []string) error {
 
 	if a.jsonOut {
 		type row struct {
-			ID       int64  `json:"id"`
-			Title    string `json:"title"`
-			Currency string `json:"currency"`
-			Archived bool   `json:"archived"`
+			ID       int64
+			Title    string
+			Currency string
+			Archived bool
 		}
 		rows := make([]row, 0, len(all))
 		for _, t := range all {
@@ -290,9 +290,9 @@ func (a *app) settle(args []string) error {
 	}
 	if a.jsonOut {
 		type row struct {
-			From   string          `json:"from"`
-			To     string          `json:"to"`
-			Amount tricount.Amount `json:"amount"`
+			From   string
+			To     string
+			Amount tricount.Amount
 		}
 		rows := make([]row, 0, len(transfers))
 		for _, tr := range transfers {
@@ -492,15 +492,15 @@ func (a *app) whoami(args []string) error {
 
 	if a.jsonOut {
 		type link struct {
-			ID       int64  `json:"id"`
-			Title    string `json:"title"`
-			LinkedAs string `json:"linked_as"`
+			ID       int64
+			Title    string
+			LinkedAs string
 		}
 		out := struct {
-			Device      string `json:"device"`
-			User        int64  `json:"user"`
-			Credentials string `json:"credentials"`
-			Tricounts   []link `json:"tricounts"`
+			Device      string
+			User        int64
+			Credentials string
+			Tricounts   []link
 		}{Device: creds.AppID, User: userID, Credentials: a.credPath, Tricounts: []link{}}
 		for _, t := range all {
 			var name string

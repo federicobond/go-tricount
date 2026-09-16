@@ -282,14 +282,14 @@ func TestWhoamiJSONCarriesIdentityAndLinks(t *testing.T) {
 	out := stdoutOf(t, a, stderr, "whoami", "--json")
 
 	var got struct {
-		Device      string `json:"device"`
-		User        int64  `json:"user"`
-		Credentials string `json:"credentials"`
+		Device      string
+		User        int64
+		Credentials string
 		Tricounts   []struct {
-			ID       int64  `json:"id"`
-			Title    string `json:"title"`
-			LinkedAs string `json:"linked_as"`
-		} `json:"tricounts"`
+			ID       int64
+			Title    string
+			LinkedAs string
+		}
 	}
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not valid JSON: %v\n%s", err, out)
@@ -300,4 +300,73 @@ func TestWhoamiJSONCarriesIdentityAndLinks(t *testing.T) {
 	if len(got.Tricounts) != 1 || got.Tricounts[0].Title != "Taiwan" || got.Tricounts[0].LinkedAs != "Alice" {
 		t.Errorf("tricounts = %+v", got.Tricounts)
 	}
+}
+
+// keysOf decodes one JSON object and returns its top-level keys. Asserting on
+// these is case-sensitive, which unmarshalling into a tagged struct is not.
+func keysOf(t *testing.T, raw string) map[string]bool {
+	t.Helper()
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &obj); err != nil {
+		t.Fatalf("not a JSON object: %v\n%s", err, raw)
+	}
+	keys := make(map[string]bool, len(obj))
+	for k := range obj {
+		keys[k] = true
+	}
+	return keys
+}
+
+func firstElement(t *testing.T, raw string) string {
+	t.Helper()
+	var arr []json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &arr); err != nil {
+		t.Fatalf("not a JSON array: %v\n%s", err, raw)
+	}
+	if len(arr) == 0 {
+		t.Fatalf("array is empty: %s", raw)
+	}
+	return string(arr[0])
+}
+
+// The CLI's own JSON uses Go field names, matching how the library's types
+// marshal, so a script sees one convention across every command.
+func TestJSONUsesGoFieldNames(t *testing.T) {
+	t.Run("whoami", func(t *testing.T) {
+		a, _, stderr := newFakeApp(t)
+		got := keysOf(t, stdoutOf(t, a, stderr, "whoami", "--json"))
+		for _, want := range []string{"Device", "User", "Credentials", "Tricounts"} {
+			if !got[want] {
+				t.Errorf("missing key %q; got %v", want, got)
+			}
+		}
+	})
+
+	t.Run("whoami tricount entries", func(t *testing.T) {
+		a, _, stderr := newFakeApp(t)
+		out := stdoutOf(t, a, stderr, "whoami", "--json")
+		var obj struct{ Tricounts []json.RawMessage }
+		if err := json.Unmarshal([]byte(out), &obj); err != nil {
+			t.Fatalf("decoding: %v", err)
+		}
+		if len(obj.Tricounts) == 0 {
+			t.Fatal("no tricounts in output")
+		}
+		got := keysOf(t, string(obj.Tricounts[0]))
+		for _, want := range []string{"ID", "Title", "LinkedAs"} {
+			if !got[want] {
+				t.Errorf("missing key %q; got %v", want, got)
+			}
+		}
+	})
+
+	t.Run("list", func(t *testing.T) {
+		a, _, stderr := newFakeApp(t)
+		got := keysOf(t, firstElement(t, stdoutOf(t, a, stderr, "list", "--json")))
+		for _, want := range []string{"ID", "Title", "Currency", "Archived"} {
+			if !got[want] {
+				t.Errorf("missing key %q; got %v", want, got)
+			}
+		}
+	})
 }

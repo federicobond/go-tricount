@@ -67,7 +67,9 @@ tricount-cli whoami              # this device's identity and its links
 
 Every command takes `--json`. Read commands emit their data; the ones that
 change something emit what they acted on, so `join --json` gives you the
-tricount and `link --json` the member. Amounts encode as strings, so exact
+tricount and `link --json` the member. Fields carry their Go names (`ID`,
+`Title`), the same as marshalling the library's types directly, so one
+convention holds across every command. Amounts encode as strings, so exact
 decimals survive a trip through `jq`. Errors stay plain text on stderr — the
 exit code is the contract.
 
