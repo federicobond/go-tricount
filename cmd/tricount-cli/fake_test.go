@@ -216,8 +216,8 @@ func TestJoinJSONEmitsTheTricount(t *testing.T) {
 	out := stdoutOf(t, a, stderr, "join", "--json", "tABC123xyz")
 
 	var got struct {
-		ID    int64  `json:"ID"`
-		Title string `json:"Title"`
+		ID    int64  `json:"id"`
+		Title string `json:"title"`
 	}
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not valid JSON: %v\n%s", err, out)
@@ -232,7 +232,7 @@ func TestJoinAsJSONReflectsTheNewLink(t *testing.T) {
 	out := stdoutOf(t, a, stderr, "join", "--json", "--as", "Carol", "tABC123xyz")
 
 	var got struct {
-		LinkedMemberUUID string `json:"LinkedMemberUUID"`
+		LinkedMemberUUID string `json:"linked_member_uuid"`
 	}
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not valid JSON: %v\n%s", err, out)
@@ -251,8 +251,8 @@ func TestLinkJSONEmitsTheMember(t *testing.T) {
 	out := stdoutOf(t, a, stderr, "link", "--json", fmt.Sprint(fakeTricountID), "Bob")
 
 	var got struct {
-		UUID        string `json:"UUID"`
-		DisplayName string `json:"DisplayName"`
+		UUID        string `json:"uuid"`
+		DisplayName string `json:"display_name"`
 	}
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not valid JSON: %v\n%s", err, out)
@@ -267,7 +267,7 @@ func TestLeaveJSONEmitsTheTricountLeft(t *testing.T) {
 	out := stdoutOf(t, a, stderr, "leave", "--json", fmt.Sprint(fakeTricountID))
 
 	var got struct {
-		ID int64 `json:"ID"`
+		ID int64 `json:"id"`
 	}
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not valid JSON: %v\n%s", err, out)
@@ -282,14 +282,14 @@ func TestWhoamiJSONCarriesIdentityAndLinks(t *testing.T) {
 	out := stdoutOf(t, a, stderr, "whoami", "--json")
 
 	var got struct {
-		Device      string
-		User        int64
-		Credentials string
+		Device      string `json:"device"`
+		User        int64  `json:"user"`
+		Credentials string `json:"credentials"`
 		Tricounts   []struct {
-			ID       int64
-			Title    string
-			LinkedAs string
-		}
+			ID       int64  `json:"id"`
+			Title    string `json:"title"`
+			LinkedAs string `json:"linked_as"`
+		} `json:"tricounts"`
 	}
 	if err := json.Unmarshal([]byte(out), &got); err != nil {
 		t.Fatalf("not valid JSON: %v\n%s", err, out)
@@ -329,13 +329,13 @@ func firstElement(t *testing.T, raw string) string {
 	return string(arr[0])
 }
 
-// The CLI's own JSON uses Go field names, matching how the library's types
-// marshal, so a script sees one convention across every command.
-func TestJSONUsesGoFieldNames(t *testing.T) {
+// Every key the CLI emits is snake_case, matching both the library's types
+// and the convention of the API underneath them.
+func TestJSONUsesSnakeCase(t *testing.T) {
 	t.Run("whoami", func(t *testing.T) {
 		a, _, stderr := newFakeApp(t)
 		got := keysOf(t, stdoutOf(t, a, stderr, "whoami", "--json"))
-		for _, want := range []string{"Device", "User", "Credentials", "Tricounts"} {
+		for _, want := range []string{"device", "user", "credentials", "tricounts"} {
 			if !got[want] {
 				t.Errorf("missing key %q; got %v", want, got)
 			}
@@ -345,7 +345,9 @@ func TestJSONUsesGoFieldNames(t *testing.T) {
 	t.Run("whoami tricount entries", func(t *testing.T) {
 		a, _, stderr := newFakeApp(t)
 		out := stdoutOf(t, a, stderr, "whoami", "--json")
-		var obj struct{ Tricounts []json.RawMessage }
+		var obj struct {
+			Tricounts []json.RawMessage `json:"tricounts"`
+		}
 		if err := json.Unmarshal([]byte(out), &obj); err != nil {
 			t.Fatalf("decoding: %v", err)
 		}
@@ -353,7 +355,7 @@ func TestJSONUsesGoFieldNames(t *testing.T) {
 			t.Fatal("no tricounts in output")
 		}
 		got := keysOf(t, string(obj.Tricounts[0]))
-		for _, want := range []string{"ID", "Title", "LinkedAs"} {
+		for _, want := range []string{"id", "title", "linked_as"} {
 			if !got[want] {
 				t.Errorf("missing key %q; got %v", want, got)
 			}
@@ -363,7 +365,7 @@ func TestJSONUsesGoFieldNames(t *testing.T) {
 	t.Run("list", func(t *testing.T) {
 		a, _, stderr := newFakeApp(t)
 		got := keysOf(t, firstElement(t, stdoutOf(t, a, stderr, "list", "--json")))
-		for _, want := range []string{"ID", "Title", "Currency", "Archived"} {
+		for _, want := range []string{"id", "title", "currency", "archived"} {
 			if !got[want] {
 				t.Errorf("missing key %q; got %v", want, got)
 			}

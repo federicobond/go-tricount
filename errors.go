@@ -26,15 +26,15 @@ var (
 //
 //	if errors.Is(err, tricount.ErrNotFound) { ... }
 type Error struct {
-	StatusCode int
+	StatusCode int `json:"status_code"`
 	// Description is bunq's error_description, or the truncated raw body
 	// when the response was not the usual error envelope.
-	Description string
+	Description string `json:"description"`
 	// ResponseID is the X-Bunq-Client-Response-Id header, worth quoting in
 	// a bug report.
-	ResponseID string
+	ResponseID string `json:"response_id"`
 	// RetryAfter is set from the Retry-After header on a 429.
-	RetryAfter time.Duration
+	RetryAfter time.Duration `json:"retry_after"`
 }
 
 func (e *Error) Error() string {

@@ -7,9 +7,9 @@ import (
 
 // Transfer is one payment in a settlement plan: From should pay Amount to To.
 type Transfer struct {
-	From   *Member
-	To     *Member
-	Amount Amount
+	From   *Member `json:"from"`
+	To     *Member `json:"to"`
+	Amount Amount  `json:"amount"`
 }
 
 // Balances computes each member's net position from the tricount's

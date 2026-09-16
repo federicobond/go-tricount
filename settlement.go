@@ -16,16 +16,16 @@ const (
 
 // SettlementItem is one payment in a server-side settlement plan.
 type SettlementItem struct {
-	PayerUUID    string
-	ReceiverUUID string
-	Amount       Amount
-	Status       PaymentStatus
+	PayerUUID    string        `json:"payer_uuid"`
+	ReceiverUUID string        `json:"receiver_uuid"`
+	Amount       Amount        `json:"amount"`
+	Status       PaymentStatus `json:"status"`
 }
 
 // Settlement is a server-side settlement plan.
 type Settlement struct {
-	ID    int64
-	Items []SettlementItem
+	ID    int64            `json:"id"`
+	Items []SettlementItem `json:"items"`
 }
 
 // CreateSettlement asks the server to compute a settlement plan.

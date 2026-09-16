@@ -67,11 +67,10 @@ tricount-cli whoami              # this device's identity and its links
 
 Every command takes `--json`. Read commands emit their data; the ones that
 change something emit what they acted on, so `join --json` gives you the
-tricount and `link --json` the member. Fields carry their Go names (`ID`,
-`Title`), the same as marshalling the library's types directly, so one
-convention holds across every command. Amounts encode as strings, so exact
-decimals survive a trip through `jq`. Errors stay plain text on stderr — the
-exit code is the contract.
+tricount and `link --json` the member. Keys are snake_case throughout,
+matching the API's own convention and what the library's types marshal to.
+Amounts encode as strings, so exact decimals survive a trip through `jq`.
+Errors stay plain text on stderr — the exit code is the contract.
 
 The device identity is created on first use in your OS config directory —
 `~/Library/Application Support/tricount/credentials.json` on macOS,
@@ -108,6 +107,13 @@ UUID, and a repeat returns the original entry's ID rather than a duplicate — s
 a caller that derives the UUID from what it is recording can retry without
 writing twice. The first write wins: a repeat with different content is ignored.
 Verified against the live API, not assumed.
+
+**The public types marshal as snake_case.** `Tricount`, `Member`,
+`Transaction` and the rest carry JSON tags following the API's convention, so
+`json.Marshal` on a tricount gives you `display_name` rather than
+`DisplayName`. The names are the library's own, not the wire's: a sharing
+token is `public_token` here and `public_identifier_token` on the wire,
+because the domain model deliberately differs from it.
 
 **Sessions are implicit.** Every method registers a session on demand and
 re-registers once on a 401. `Client` is safe for concurrent use.

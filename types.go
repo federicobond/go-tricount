@@ -110,94 +110,94 @@ func (c Category) Valid() bool {
 // Member is one participant in a tricount.
 type Member struct {
 	// ID is the membership ID, needed only to delete the member.
-	ID int64
+	ID int64 `json:"id"`
 	// UUID is the membership UUID, used everywhere else.
-	UUID        string
-	DisplayName string
-	Status      MemberStatus
+	UUID        string       `json:"uuid"`
+	DisplayName string       `json:"display_name"`
+	Status      MemberStatus `json:"status"`
 }
 
 // Allocation is one member's share of a transaction. Amounts are always
 // positive.
 type Allocation struct {
-	MemberUUID string
-	Amount     Amount
+	MemberUUID string `json:"member_uuid"`
+	Amount     Amount `json:"amount"`
 	// LocalAmount is the share in the transaction's original currency, set
 	// only on foreign-currency transactions.
-	LocalAmount *Amount
-	Type        AllocationType
+	LocalAmount *Amount        `json:"local_amount"`
+	Type        AllocationType `json:"type"`
 	// ShareRatio is meaningful only when Type is AllocationRatio.
-	ShareRatio int
+	ShareRatio int `json:"share_ratio"`
 }
 
 // Transaction is an expense, income or reimbursement. Amounts are always
 // positive; the API's negative-for-expenses convention is confined to the
 // wire layer.
 type Transaction struct {
-	ID          int64
-	UUID        string
-	Date        time.Time
-	Description string
-	Kind        TransactionKind
-	Status      TransactionStatus
-	Amount      Amount
+	ID          int64             `json:"id"`
+	UUID        string            `json:"uuid"`
+	Date        time.Time         `json:"date"`
+	Description string            `json:"description"`
+	Kind        TransactionKind   `json:"kind"`
+	Status      TransactionStatus `json:"status"`
+	Amount      Amount            `json:"amount"`
 	// LocalAmount is the total in the original currency, set only on
 	// foreign-currency transactions.
-	LocalAmount *Amount
+	LocalAmount *Amount `json:"local_amount"`
 	// ExchangeRate is a decimal string, empty unless LocalAmount is set.
-	ExchangeRate string
+	ExchangeRate string `json:"exchange_rate"`
 	// PayerUUID is the membership UUID of whoever paid, or received in the
 	// case of income.
-	PayerUUID      string
-	Allocations    []Allocation
-	Category       Category
-	CategoryCustom string
-	AttachmentIDs  []int64
+	PayerUUID      string       `json:"payer_uuid"`
+	Allocations    []Allocation `json:"allocations"`
+	Category       Category     `json:"category"`
+	CategoryCustom string       `json:"category_custom"`
+	AttachmentIDs  []int64      `json:"attachment_ids"`
 }
 
 // GalleryAttachment is an image attached to a tricount's gallery rather than
 // to a particular transaction.
 type GalleryAttachment struct {
-	AttachmentID int64
-	UUID         string
-	ContentType  string
+	AttachmentID int64  `json:"attachment_id"`
+	UUID         string `json:"uuid"`
+	ContentType  string `json:"content_type"`
 	// OriginalURL is the ORIGINAL entry of the attachment's URL list.
-	OriginalURL string
+	OriginalURL string `json:"original_url"`
 	// UploaderUUID is the membership UUID of whoever uploaded it.
-	UploaderUUID string
+	UploaderUUID string `json:"uploader_uuid"`
 }
 
 // Tricount is a shared-expense group.
 type Tricount struct {
-	ID    int64
-	UUID  string
-	Title string
+	ID    int64  `json:"id"`
+	UUID  string `json:"uuid"`
+	Title string `json:"title"`
 	// Description can only be set when the tricount is created. The API
 	// accepts updates to it and silently discards them.
-	Description string
+	Description string `json:"description"`
 	// Currency can only be set when the tricount is created. The API rejects
 	// updates to it.
-	Currency string
-	Emoji    string
-	Category Category
-	Status   TricountStatus
-	Created  time.Time
+	Currency string         `json:"currency"`
+	Emoji    string         `json:"emoji"`
+	Category Category       `json:"category"`
+	Status   TricountStatus `json:"status"`
+	Created  time.Time      `json:"created"`
 	// PublicToken is the sharing-link key, the tXXXX part of a
 	// tricount.com/tXXXX URL. Anyone holding it can read and write.
-	PublicToken string
+	PublicToken string `json:"public_token"`
 	// Members holds the active members, which is what every write path and
 	// every split should use.
-	Members []*Member
+	Members []*Member `json:"members"`
 	// FormerMembers holds memberships the API has marked deleted. It keeps
 	// them separate from Members so a split never picks one, while still
 	// letting MemberByUUID resolve the historical transactions they appear
 	// in. Deleting a member does not remove them server-side.
-	FormerMembers []*Member
-	Transactions  []*Transaction
-	Gallery       []*GalleryAttachment
+	FormerMembers []*Member            `json:"former_members"`
+	Transactions  []*Transaction       `json:"transactions"`
+	Gallery       []*GalleryAttachment `json:"gallery"`
 	// LinkedMemberUUID is which member this device counts as, the API's
 	// membership_uuid_active. Empty when not linked.
-	LinkedMemberUUID string
+	LinkedMemberUUID string `json:"linked_member_uuid"`
 }
 
 // MemberByName returns the active member with that display name, or nil.
@@ -264,6 +264,6 @@ func (t *Tricount) LinkedMember() *Member {
 // SyncResult is what registry-synchronization returns: this device's
 // tricounts, partitioned by state.
 type SyncResult struct {
-	Active   []*Tricount
-	Archived []*Tricount
+	Active   []*Tricount `json:"active"`
+	Archived []*Tricount `json:"archived"`
 }
