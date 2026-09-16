@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 )
 
 // GetTricount fetches a tricount by its public sharing token — the tXXXX part
@@ -20,25 +19,46 @@ func (c *Client) GetTricount(ctx context.Context, publicToken string) (*Tricount
 	if err != nil {
 		return nil, err
 	}
-	if len(found) == 0 {
-		return nil, fmt.Errorf("tricount with token %q: %w", publicToken, ErrNotFound)
+	for _, t := range found {
+		if t.PublicToken == publicToken {
+			return t, nil
+		}
 	}
-	return found[0], nil
+	return nil, fmt.Errorf("tricount with token %q: %w", publicToken, ErrNotFound)
 }
 
 // GetTricountByID fetches a tricount this device already has access to.
+//
+// The id goes in the path. As a query parameter on the collection the API
+// ignores it and returns every registry the device follows, which silently
+// yields the wrong tricount as soon as there is more than one — and a caller
+// writes through whatever comes back. The id of the result is checked against
+// the one asked for, so a future change fails loudly rather than quietly.
 func (c *Client) GetTricountByID(ctx context.Context, id int64) (*Tricount, error) {
 	if id == 0 {
 		return nil, fmt.Errorf("%w: tricount id is zero", ErrInvalidRequest)
 	}
-	found, err := c.fetchRegistries(ctx, url.Values{"registry_id": {strconv.FormatInt(id, 10)}})
+	body, err := c.do(ctx, request{
+		method:   http.MethodGet,
+		userPath: fmt.Sprintf("/registry/%d", id),
+	})
 	if err != nil {
 		return nil, err
 	}
-	if len(found) == 0 {
-		return nil, fmt.Errorf("tricount %d: %w", id, ErrNotFound)
+	wires, err := decodeEnvelope[wireRegistry](body, "Registry")
+	if err != nil {
+		return nil, err
 	}
-	return found[0], nil
+	found, err := wireRegistriesToDomain(wires)
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range found {
+		if t.ID == id {
+			return t, nil
+		}
+	}
+	return nil, fmt.Errorf("tricount %d: %w", id, ErrNotFound)
 }
 
 // ListTricounts returns every tricount synced to this device, active and

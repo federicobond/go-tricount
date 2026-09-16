@@ -77,9 +77,9 @@ func TestGetTricountNotFound(t *testing.T) {
 
 func TestGetTricountByID(t *testing.T) {
 	fixture := loadFixture(t, "registry.json")
-	var gotQuery string
+	var gotPath, gotQuery string
 	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		gotQuery = r.URL.RawQuery
+		gotPath, gotQuery = r.URL.Path, r.URL.RawQuery
 		w.Write(fixture)
 	})
 
@@ -90,8 +90,50 @@ func TestGetTricountByID(t *testing.T) {
 	if tri.Title != "Taiwan" {
 		t.Errorf("Title = %q", tri.Title)
 	}
-	if gotQuery != "registry_id=102257091" {
-		t.Errorf("query = %q", gotQuery)
+	// The id goes in the path. As a query parameter the API ignores it and
+	// returns every registry the device follows, so the first one comes back
+	// whatever was asked for.
+	if gotPath != "/v1/user/79290957/registry/102257091" {
+		t.Errorf("path = %q", gotPath)
+	}
+	if gotQuery != "" {
+		t.Errorf("query = %q, want none", gotQuery)
+	}
+}
+
+// TestGetTricountByIDRefusesTheWrongTricount guards the case that made this
+// worth fixing: a caller writes through whatever comes back, so returning
+// some other tricount would post expenses to the wrong ledger.
+func TestGetTricountByIDRefusesTheWrongTricount(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"Response":[
+			{"Registry":{"id":999,"title":"Somebody else","currency":"EUR","status":"READ_WRITE","memberships":[],"all_registry_entry":[]}}
+		]}`))
+	})
+
+	tri, err := c.GetTricountByID(context.Background(), 102257091)
+	if err == nil {
+		t.Fatalf("got tricount %d %q, want an error", tri.ID, tri.Title)
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
+	}
+}
+
+func TestGetTricountRefusesTheWrongToken(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"Response":[
+			{"Registry":{"id":999,"title":"Somebody else","currency":"EUR","status":"READ_WRITE",
+			 "public_identifier_token":"tOTHER","memberships":[],"all_registry_entry":[]}}
+		]}`))
+	})
+
+	tri, err := c.GetTricount(context.Background(), "tABC123xyz")
+	if err == nil {
+		t.Fatalf("got tricount %d %q, want an error", tri.ID, tri.Title)
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound", err)
 	}
 }
 
@@ -389,7 +431,9 @@ func TestJoinTricountSyncsThenRereads(t *testing.T) {
 	if paths[0] != "/v1/user/79290957/registry-synchronization" {
 		t.Errorf("first request was %q", paths[0])
 	}
-	if paths[1] != "/v1/user/79290957/registry" {
+	// The re-read addresses the tricount by path; on the collection the API
+	// ignores registry_id and would hand back whichever comes first.
+	if paths[1] != "/v1/user/79290957/registry/102257091" {
 		t.Errorf("second request was %q", paths[1])
 	}
 }
