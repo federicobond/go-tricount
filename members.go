@@ -100,9 +100,14 @@ func (c *Client) DeleteMember(ctx context.Context, t *Tricount, m *Member) error
 //
 // The link is per-device, verified against the live API: two devices following
 // the same tricount hold independent links, and one changing its own leaves the
-// other's alone. A device that has just joined is auto-linked to the member
-// with the lowest ID, so a tricount created through this library links its
-// creator to the placeholder member the API adds.
+// other's alone. A member can hold more than one link, also verified: a second
+// device may claim the member a first is already linked to, and both then count
+// as that member. One person running this from a laptop and a server need not
+// share a credentials file to be the same member in a tricount.
+//
+// A device that has just joined is auto-linked to the member with the lowest
+// ID, so a tricount created through this library links its creator to the
+// placeholder member the API adds.
 //
 // The API has no way to unlink: once linked you can only switch to another
 // member.

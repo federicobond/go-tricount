@@ -125,9 +125,11 @@ own rejections are opaque strings like `"superfluous field"`.
 
 **Linking is per-device.** `LinkToMember` sets which member *this* device
 counts as. Two devices following the same tricount hold independent links, so
-one switching does not move the other — verified with a second registered
-device, not assumed. A device that has just joined is auto-linked to the member
-with the lowest ID.
+one switching does not move the other, and a member can hold more than one
+link: a second device may claim the member a first already holds, and both
+then count as that member. Both verified with a second registered device, not
+assumed. A device that has just joined is auto-linked to the member with the
+lowest ID.
 
 **Removed members are not really removed.** Deleting a member leaves the
 membership server-side with a `DELETED` status so their transactions still
