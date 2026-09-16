@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 1.24 is what go.mod declares; stable catches a new release breaking
+        # the package before someone else's build does.
+        go: ['1.24', 'stable']
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "not gofmt'd:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: vet
+        run: go vet ./...
+
+      # The live tests are excluded from every build by their tag, so nothing
+      # else would notice them failing to compile after an API change.
+      - name: vet live tests
+        run: go vet -tags live ./...
+
+      - name: test
+        run: go test -race ./...
