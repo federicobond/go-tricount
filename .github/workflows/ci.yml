@@ -42,5 +42,13 @@ jobs:
       - name: vet live tests
         run: go vet -tags live ./...
 
+      # Pinned to a release rather than @latest, so a new check cannot turn
+      # main red on its own; bump it deliberately. The live tag again, for
+      # the same reason as vet.
+      - name: staticcheck
+        run: |
+          go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 ./...
+          go run honnef.co/go/tools/cmd/staticcheck@v0.8.2 -tags live ./...
+
       - name: test
         run: go test -race ./...
