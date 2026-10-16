@@ -14,9 +14,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 1.24 is what go.mod declares; stable catches a new release breaking
-        # the package before someone else's build does.
-        go: ['1.24', 'stable']
+        # 1.26 is what go.mod declares, the oldest release Go still supports;
+        # stable catches a new release breaking the package before someone
+        # else's build does.
+        go: ['1.26', 'stable']
 
     steps:
       - uses: actions/checkout@v7
