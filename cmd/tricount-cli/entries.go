@@ -33,16 +33,9 @@ func parseMixed(fs *flag.FlagSet, args []string) ([]string, error) {
 // given, else the one set by `use`, else the only tricount followed.
 func (a *app) resolveTricount(ctx context.Context, c *tricount.Client, selector string) (*tricount.Tricount, error) {
 	if selector == "" {
-		id, err := a.current()
-		if err != nil {
-			return nil, err
-		}
-		if id != 0 {
-			t, err := c.GetTricountByID(ctx, id)
-			if err != nil {
-				return nil, fmt.Errorf("the current tricount, %d, is not followed any more; `tricount-cli use --unset` or pick another: %w", id, err)
-			}
-			return t, nil
+		t, err := a.currentTricount(ctx, c)
+		if err != nil || t != nil {
+			return t, err
 		}
 	}
 	return a.resolveFollowed(ctx, c, selector)

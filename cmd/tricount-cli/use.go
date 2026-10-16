@@ -35,6 +35,21 @@ func (a *app) current() (int64, error) {
 	return id, nil
 }
 
+// currentTricount fetches the tricount set by `use`, or nil when none is.
+// One that is no longer followed is an error, not a fallback: silently
+// acting on another tricount is the failure `use` must never produce.
+func (a *app) currentTricount(ctx context.Context, c *tricount.Client) (*tricount.Tricount, error) {
+	id, err := a.current()
+	if err != nil || id == 0 {
+		return nil, err
+	}
+	t, err := c.GetTricountByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("the current tricount, %d, is not followed any more; `tricount-cli use --unset` or pick another: %w", id, err)
+	}
+	return t, nil
+}
+
 func (a *app) setCurrent(id int64) error {
 	return os.WriteFile(a.currentPath(), []byte(strconv.FormatInt(id, 10)+"\n"), 0o600)
 }
@@ -74,20 +89,16 @@ func (a *app) use(args []string) error {
 	ctx := context.Background()
 
 	if fs.NArg() == 0 {
-		id, err := a.current()
+		t, err := a.currentTricount(ctx, c)
 		if err != nil {
 			return err
 		}
-		if id == 0 {
+		if t == nil {
 			if a.jsonOut {
 				return a.encode(nil)
 			}
 			fmt.Fprintln(a.stdout, "no current tricount; `tricount-cli use <tricount>` sets one")
 			return nil
-		}
-		t, err := c.GetTricountByID(ctx, id)
-		if err != nil {
-			return fmt.Errorf("the current tricount, %d, is not followed any more; `tricount-cli use --unset` or pick another: %w", id, err)
 		}
 		return a.reportCurrent(t)
 	}
