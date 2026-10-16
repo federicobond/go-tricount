@@ -72,8 +72,6 @@ func SplitExactly(amounts []MemberAmount) Split {
 	return s
 }
 
-func (s Split) memberList() []*Member { return s.members }
-
 // resolve turns the split into allocations of total, validating the members
 // against t as it goes. Returned amounts are positive; the wire layer applies
 // the API's sign convention.
