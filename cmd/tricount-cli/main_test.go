@@ -142,12 +142,12 @@ func TestSettlePrintsTransferPlan(t *testing.T) {
 	}
 }
 
-func TestSelectorMustBeNumeric(t *testing.T) {
+func TestUnknownSelectorIsNamed(t *testing.T) {
 	a, _, stderr := fixtureApp(t)
-	if code := a.run([]string{"balances", "Taiwan"}); code == 0 {
-		t.Error("exit code = 0, want non-zero for a non-numeric id")
+	if code := a.run([]string{"balances", "Nonesuch"}); code == 0 {
+		t.Error("exit code = 0, want non-zero for a tricount that does not exist")
 	}
-	if !strings.Contains(stderr.String(), "Taiwan") {
+	if !strings.Contains(stderr.String(), "Nonesuch") {
 		t.Errorf("stderr should name the bad argument: %q", stderr.String())
 	}
 }

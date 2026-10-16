@@ -57,13 +57,16 @@ go install github.com/federicobond/go-tricount/cmd/tricount-cli@latest
 tricount-cli join tABC123xyz     # follow a tricount by its sharing token
 tricount-cli join tABC --as Ana  # ... and be Ana, creating her if needed
 tricount-cli list                # what this device follows, with ids
-tricount-cli show <id>           # members and transactions
-tricount-cli balances <id>       # each member's net position
-tricount-cli settle <id>         # transfers that clear every balance
-tricount-cli link <id> <name>    # set which member this device counts as
-tricount-cli link --create <id> <name>   # ... adding them if they do not exist
+tricount-cli show                # members and transactions
+tricount-cli balances            # each member's net position
+tricount-cli settle              # transfers that clear every balance
+tricount-cli link <name>         # set which member this device counts as
+tricount-cli link --create <name>   # ... adding them if they do not exist
 tricount-cli whoami              # this device's identity and its links
 ```
+
+Each acts on the one tricount the device follows. With several, put its id
+or title first: `tricount-cli balances 102257091`, `tricount-cli show Flat`.
 
 Three commands write:
 
@@ -81,9 +84,9 @@ for a ratio. `--exact` takes `name=amount` pairs that sum to the total.
 `Food & Drink`), else the custom label the app shows. `--uuid` makes a retry
 safe; see the idempotency note below.
 
-They write to the one tricount the device follows. With several, say which
-with `--in`, by id or title. There is no "current" tricount to switch and
-forget.
+These pick the tricount the same way, but their positionals are taken, so
+with several followed the id or title goes in `--in`. There is no "current"
+tricount to switch and forget.
 
 Every command takes `--json`. Read commands emit their data; the ones that
 change something emit what they acted on, so `join --json` gives you the

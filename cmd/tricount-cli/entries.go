@@ -53,17 +53,17 @@ func resolveTricount(ctx context.Context, c *tricount.Client, selector string) (
 		if selector == "" {
 			return nil, fmt.Errorf("this device follows no tricount; `tricount-cli join <token>` first")
 		}
-		return nil, fmt.Errorf("no tricount called %q; use --in with an ID or TITLE from `tricount-cli list`", selector)
+		return nil, fmt.Errorf("no tricount called %q; `tricount-cli list` shows the ids and titles", selector)
 	}
 	names := make([]string, 0, len(matches))
 	for _, t := range matches {
 		names = append(names, fmt.Sprintf("%d %s", t.ID, t.Title))
 	}
 	if selector == "" {
-		return nil, fmt.Errorf("this device follows %d tricounts; say which with --in <id>: %s",
+		return nil, fmt.Errorf("this device follows %d tricounts; name one by id or title: %s",
 			len(matches), strings.Join(names, ", "))
 	}
-	return nil, fmt.Errorf("%q names %d tricounts; use --in with the id instead: %s",
+	return nil, fmt.Errorf("%q names %d tricounts; use the id instead: %s",
 		selector, len(matches), strings.Join(names, ", "))
 }
 

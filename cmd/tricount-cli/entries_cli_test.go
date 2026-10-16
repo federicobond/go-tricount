@@ -161,7 +161,7 @@ func TestAddRefusesToGuessBetweenSeveralTricounts(t *testing.T) {
 		t.Error("nothing should have been posted")
 	}
 	msg := stderr.String()
-	for _, want := range []string{"--in", "Taiwan", "Trip", "102257091", "777000001"} {
+	for _, want := range []string{"Taiwan", "Trip", "102257091", "777000001"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("error should mention %q: %q", want, msg)
 		}

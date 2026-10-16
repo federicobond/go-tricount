@@ -22,7 +22,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 
@@ -105,13 +104,13 @@ func (a *app) usage() {
 
 commands:
   list              the tricounts this device follows
-  show <id>         members and transactions of one tricount
-  balances <id>     each member's net position
-  settle <id>       a plan of transfers that clears every balance
+  show              members and transactions of one tricount
+  balances          each member's net position
+  settle            a plan of transfers that clears every balance
   join <token>      follow a tricount, by the tXXXX part of its sharing link
                     --as <name> to be that member, created if absent
-  leave <id>        stop following a tricount
-  link <id> <name>  set which member this device counts as, --create to add them
+  leave             stop following a tricount
+  link <name>       set which member this device counts as, --create to add them
   whoami            this device's identity and its member in each tricount
 
   add <amount> <description>
@@ -121,7 +120,9 @@ commands:
                     a reimbursement; --from defaults to you
   remove <transaction-id>
 
-Writes go to the one tricount followed; with several, --in <id or title>.
+Commands act on the one tricount followed. With several, name it: an id or
+title before the arguments of show, balances, settle, leave and link, or
+--in <id or title> on add, pay and remove.
 `)
 }
 
@@ -210,25 +211,21 @@ func (a *app) list(args []string) error {
 	return w.Flush()
 }
 
-// tricountArg parses the single numeric id these commands take and fetches it.
+// tricountArg parses the optional tricount these commands take, an id or a
+// title, and fetches it; left out, it is the only tricount followed.
 func (a *app) tricountArg(name string, args []string) (*tricount.Tricount, error) {
 	fs := a.flags(name)
 	if err := fs.Parse(args); err != nil {
 		return nil, err
 	}
-	if fs.NArg() != 1 {
-		return nil, fmt.Errorf("usage: tricount-cli %s <id>", name)
+	if fs.NArg() > 1 {
+		return nil, fmt.Errorf("usage: tricount-cli %s [<tricount>]", name)
 	}
-	id, err := strconv.ParseInt(fs.Arg(0), 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("%q is not a tricount id; use the ID column from `tricount-cli list`", fs.Arg(0))
-	}
-
 	c, err := a.client()
 	if err != nil {
 		return nil, err
 	}
-	return c.GetTricountByID(context.Background(), id)
+	return resolveTricount(context.Background(), c, fs.Arg(0))
 }
 
 func (a *app) show(args []string) error {
@@ -502,12 +499,13 @@ func (a *app) link(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if fs.NArg() != 2 {
-		return fmt.Errorf("usage: tricount-cli link [--create] <id> <member>")
+	// One argument is the member; two are the tricount and the member.
+	if fs.NArg() < 1 || fs.NArg() > 2 {
+		return fmt.Errorf("usage: tricount-cli link [--create] [<tricount>] <member>")
 	}
-	id, err := strconv.ParseInt(fs.Arg(0), 10, 64)
-	if err != nil {
-		return fmt.Errorf("%q is not a tricount id; use the ID column from `tricount-cli list`", fs.Arg(0))
+	selector, member := "", fs.Arg(0)
+	if fs.NArg() == 2 {
+		selector, member = fs.Arg(0), fs.Arg(1)
 	}
 
 	c, err := a.client()
@@ -515,11 +513,11 @@ func (a *app) link(args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	t, err := c.GetTricountByID(ctx, id)
+	t, err := resolveTricount(ctx, c, selector)
 	if err != nil {
 		return err
 	}
-	m, err := memberFor(ctx, c, t, fs.Arg(1), *create)
+	m, err := memberFor(ctx, c, t, member, *create)
 	if err != nil {
 		return err
 	}
