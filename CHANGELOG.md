@@ -6,6 +6,8 @@ Notable changes to go-tricount, library and command line. Format per
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-16
+
 ### Added
 
 - `tricount-cli add`, `pay` and `remove`: an expense, a reimbursement, a
@@ -40,5 +42,6 @@ Notable changes to go-tricount, library and command line. Format per
 Initial release: the client, exact decimal amounts, and a read-only
 `tricount-cli`.
 
-[Unreleased]: https://github.com/federicobond/go-tricount/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/federicobond/go-tricount/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/federicobond/go-tricount/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/federicobond/go-tricount/releases/tag/v0.1.0
