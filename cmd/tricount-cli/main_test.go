@@ -49,7 +49,7 @@ func TestListPrintsIDAndTitle(t *testing.T) {
 		]}`))
 	})
 
-	if code := a.run([]string{"list"}); code != 0 {
+	if code := a.run(t.Context(), []string{"list"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 
@@ -74,7 +74,7 @@ func TestFailuresExitNonZero(t *testing.T) {
 			a, _, stderr := newTestApp(t, func(w http.ResponseWriter, r *http.Request) {
 				t.Error("no request should be made")
 			})
-			if code := a.run(tc.args); code == 0 {
+			if code := a.run(t.Context(), tc.args); code == 0 {
 				t.Errorf("exit code = 0, want non-zero; stderr = %q", stderr.String())
 			}
 		})
@@ -86,7 +86,7 @@ func TestAPIFailureExitsNonZero(t *testing.T) {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"Error":[{"error_description":"boom"}]}`))
 	})
-	if code := a.run([]string{"list"}); code == 0 {
+	if code := a.run(t.Context(), []string{"list"}); code == 0 {
 		t.Error("exit code = 0, want non-zero when the API fails")
 	}
 }
@@ -104,7 +104,7 @@ func fixtureApp(t *testing.T) (*app, *bytes.Buffer, *bytes.Buffer) {
 
 func TestShowPrintsMembersAndTransactions(t *testing.T) {
 	a, stdout, stderr := fixtureApp(t)
-	if code := a.run([]string{"show", "102257091"}); code != 0 {
+	if code := a.run(t.Context(), []string{"show", "102257091"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	out := stdout.String()
@@ -117,7 +117,7 @@ func TestShowPrintsMembersAndTransactions(t *testing.T) {
 
 func TestBalancesPrintsNetPositions(t *testing.T) {
 	a, stdout, stderr := fixtureApp(t)
-	if code := a.run([]string{"balances", "102257091"}); code != 0 {
+	if code := a.run(t.Context(), []string{"balances", "102257091"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	out := stdout.String()
@@ -131,7 +131,7 @@ func TestBalancesPrintsNetPositions(t *testing.T) {
 
 func TestSettlePrintsTransferPlan(t *testing.T) {
 	a, stdout, stderr := fixtureApp(t)
-	if code := a.run([]string{"settle", "102257091"}); code != 0 {
+	if code := a.run(t.Context(), []string{"settle", "102257091"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	out := stdout.String()
@@ -144,7 +144,7 @@ func TestSettlePrintsTransferPlan(t *testing.T) {
 
 func TestUnknownSelectorIsNamed(t *testing.T) {
 	a, _, stderr := fixtureApp(t)
-	if code := a.run([]string{"balances", "Nonesuch"}); code == 0 {
+	if code := a.run(t.Context(), []string{"balances", "Nonesuch"}); code == 0 {
 		t.Error("exit code = 0, want non-zero for a tricount that does not exist")
 	}
 	if !strings.Contains(stderr.String(), "Nonesuch") {
@@ -185,7 +185,7 @@ func routedApp(t *testing.T) (*app, *bytes.Buffer, *bytes.Buffer, *[]string, *[]
 
 func TestJoinSyncsTheToken(t *testing.T) {
 	a, stdout, stderr, _, bodies := routedApp(t)
-	if code := a.run([]string{"join", "tABC123xyz"}); code != 0 {
+	if code := a.run(t.Context(), []string{"join", "tABC123xyz"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	if len(*bodies) == 0 || !strings.Contains((*bodies)[0], "tABC123xyz") {
@@ -198,7 +198,7 @@ func TestJoinSyncsTheToken(t *testing.T) {
 
 func TestLeaveSendsTheTokenAsDeleted(t *testing.T) {
 	a, _, stderr, _, bodies := routedApp(t)
-	if code := a.run([]string{"leave", "102257091"}); code != 0 {
+	if code := a.run(t.Context(), []string{"leave", "102257091"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	var sawDeleted bool
@@ -214,7 +214,7 @@ func TestLeaveSendsTheTokenAsDeleted(t *testing.T) {
 
 func TestLinkSetsTheMember(t *testing.T) {
 	a, _, stderr, _, bodies := routedApp(t)
-	if code := a.run([]string{"link", "102257091", "Bob"}); code != 0 {
+	if code := a.run(t.Context(), []string{"link", "102257091", "Bob"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	var sawBob bool
@@ -230,7 +230,7 @@ func TestLinkSetsTheMember(t *testing.T) {
 
 func TestLinkUnknownMemberNamesTheOptions(t *testing.T) {
 	a, _, stderr, _, _ := routedApp(t)
-	if code := a.run([]string{"link", "102257091", "Carol"}); code == 0 {
+	if code := a.run(t.Context(), []string{"link", "102257091", "Carol"}); code == 0 {
 		t.Fatal("exit code = 0, want non-zero for an unknown member")
 	}
 	msg := stderr.String()
@@ -241,7 +241,7 @@ func TestLinkUnknownMemberNamesTheOptions(t *testing.T) {
 
 func TestWhoamiShowsDeviceAndLinks(t *testing.T) {
 	a, stdout, stderr, _, _ := routedApp(t)
-	if code := a.run([]string{"whoami"}); code != 0 {
+	if code := a.run(t.Context(), []string{"whoami"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	out := stdout.String()
@@ -258,7 +258,7 @@ func TestListJSON(t *testing.T) {
 			{"Registry":{"id":1,"title":"Flat","currency":"EUR","status":"READ_WRITE","memberships":[],"all_registry_entry":[]}}
 		]}`))
 	})
-	if code := a.run([]string{"list", "--json"}); code != 0 {
+	if code := a.run(t.Context(), []string{"list", "--json"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	var got []struct {
@@ -276,7 +276,7 @@ func TestListJSON(t *testing.T) {
 
 func TestBalancesJSONKeepsAmountsExact(t *testing.T) {
 	a, stdout, stderr := fixtureApp(t)
-	if code := a.run([]string{"balances", "--json", "102257091"}); code != 0 {
+	if code := a.run(t.Context(), []string{"balances", "--json", "102257091"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	var got map[string]struct {
@@ -297,7 +297,7 @@ func TestBalancesJSONKeepsAmountsExact(t *testing.T) {
 
 func TestSettleJSON(t *testing.T) {
 	a, stdout, stderr := fixtureApp(t)
-	if code := a.run([]string{"settle", "--json", "102257091"}); code != 0 {
+	if code := a.run(t.Context(), []string{"settle", "--json", "102257091"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	var got []struct {
@@ -338,7 +338,7 @@ func findRow(out, contains string) []string {
 
 func TestShowGivesEachMemberAColumn(t *testing.T) {
 	a, stdout, stderr := fixtureApp(t)
-	if code := a.run([]string{"show", "102257091"}); code != 0 {
+	if code := a.run(t.Context(), []string{"show", "102257091"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	out := stdout.String()

@@ -119,7 +119,7 @@ func payerOr(t *tricount.Tricount, name string) (*tricount.Member, error) {
 		t.Title, t.ID)
 }
 
-func (a *app) add(args []string) error {
+func (a *app) add(ctx context.Context, args []string) error {
 	fs := a.flags("add")
 	in := fs.String("in", "", "tricount id or title, when the device follows several")
 	paidBy := fs.String("paid-by", "", "who paid; default: the linked member")
@@ -143,7 +143,6 @@ func (a *app) add(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	t, err := a.resolveTricount(ctx, c, *in)
 	if err != nil {
 		return err
@@ -193,7 +192,7 @@ func (a *app) add(args []string) error {
 	return nil
 }
 
-func (a *app) pay(args []string) error {
+func (a *app) pay(ctx context.Context, args []string) error {
 	fs := a.flags("pay")
 	in := fs.String("in", "", "tricount id or title, when the device follows several")
 	from := fs.String("from", "", "who paid; default: the linked member")
@@ -213,7 +212,6 @@ func (a *app) pay(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	t, err := a.resolveTricount(ctx, c, *in)
 	if err != nil {
 		return err
@@ -255,7 +253,7 @@ func (a *app) pay(args []string) error {
 	return nil
 }
 
-func (a *app) remove(args []string) error {
+func (a *app) remove(ctx context.Context, args []string) error {
 	fs := a.flags("remove")
 	in := fs.String("in", "", "tricount id or title, when the device follows several")
 	positional, err := parseMixed(fs, args)
@@ -274,7 +272,6 @@ func (a *app) remove(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	t, err := a.resolveTricount(ctx, c, *in)
 	if err != nil {
 		return err

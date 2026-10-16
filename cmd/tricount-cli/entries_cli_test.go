@@ -100,7 +100,7 @@ func TestAddSplitExactAmounts(t *testing.T) {
 
 func TestAddExactSplitMustSumToTheTotal(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
-	if code := a.run([]string{"add", "1000", "Dinner", "--exact", "Alice=400,Bob=500"}); code == 0 {
+	if code := a.run(t.Context(), []string{"add", "1000", "Dinner", "--exact", "Alice=400,Bob=500"}); code == 0 {
 		t.Fatal("exit code = 0; exact shares that do not sum to the total must fail")
 	}
 	if len(f.entries) != 0 {
@@ -113,7 +113,7 @@ func TestAddExactSplitMustSumToTheTotal(t *testing.T) {
 
 func TestAddUnknownMemberNamesTheOptions(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
-	if code := a.run([]string{"add", "1000", "Dinner", "--paid-by", "Carol"}); code == 0 {
+	if code := a.run(t.Context(), []string{"add", "1000", "Dinner", "--paid-by", "Carol"}); code == 0 {
 		t.Fatal("exit code = 0, want non-zero for an unknown member")
 	}
 	if len(f.entries) != 0 {
@@ -154,7 +154,7 @@ const secondRegistry = `{"id":777000001,"title":"Trip","currency":"JPY","status"
 func TestAddRefusesToGuessBetweenSeveralTricounts(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
 	f.extra = secondRegistry
-	if code := a.run([]string{"add", "1000", "Taxi"}); code == 0 {
+	if code := a.run(t.Context(), []string{"add", "1000", "Taxi"}); code == 0 {
 		t.Fatal("exit code = 0; with two tricounts followed the command must ask which")
 	}
 	if len(f.entries) != 0 {
@@ -244,7 +244,7 @@ func TestPayDefaultsFromToTheLinkedMember(t *testing.T) {
 
 func TestPayNeedsARecipient(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
-	if code := a.run([]string{"pay", "100"}); code == 0 {
+	if code := a.run(t.Context(), []string{"pay", "100"}); code == 0 {
 		t.Fatal("exit code = 0; a reimbursement without --to must fail")
 	}
 	if len(f.entries) != 0 {
@@ -268,7 +268,7 @@ func TestRemoveDeletesTheTransaction(t *testing.T) {
 
 func TestRemoveRejectsANonNumericID(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
-	if code := a.run([]string{"remove", "Ramen"}); code == 0 {
+	if code := a.run(t.Context(), []string{"remove", "Ramen"}); code == 0 {
 		t.Fatal("exit code = 0, want non-zero for a non-numeric transaction id")
 	}
 	if len(f.deletes) != 0 {

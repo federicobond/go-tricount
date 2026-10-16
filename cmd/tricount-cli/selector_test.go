@@ -27,7 +27,7 @@ func TestShowAcceptsATitle(t *testing.T) {
 func TestBalancesRefusesToGuessBetweenSeveralTricounts(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
 	f.extra = secondRegistry
-	if code := a.run([]string{"balances"}); code == 0 {
+	if code := a.run(t.Context(), []string{"balances"}); code == 0 {
 		t.Fatal("exit code = 0; with two tricounts followed the command must ask which")
 	}
 	msg := stderr.String()
@@ -49,7 +49,7 @@ func TestLinkWithOnlyAMemberUsesTheOnlyTricount(t *testing.T) {
 
 func TestLeaveDefaultsToTheOnlyTricount(t *testing.T) {
 	a, _, stderr, _, bodies := routedApp(t)
-	if code := a.run([]string{"leave"}); code != 0 {
+	if code := a.run(t.Context(), []string{"leave"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	var sawDeleted bool

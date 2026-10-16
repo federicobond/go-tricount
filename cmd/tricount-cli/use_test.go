@@ -16,7 +16,7 @@ func twoTricountApp(t *testing.T) (*app, *fakeAPI, *strings.Builder) {
 
 func TestUseMakesLaterCommandsDefaultToIt(t *testing.T) {
 	a, _, stderr := twoTricountApp(t)
-	if code := a.run([]string{"show"}); code == 0 {
+	if code := a.run(t.Context(), []string{"show"}); code == 0 {
 		t.Fatal("exit code = 0; before `use`, two tricounts followed must mean asking")
 	}
 	stdoutOf(t, a, stderr, "use", "taiwan")
@@ -54,14 +54,14 @@ func TestUseUnsetGoesBackToAsking(t *testing.T) {
 	a, _, stderr := twoTricountApp(t)
 	stdoutOf(t, a, stderr, "use", "taiwan")
 	stdoutOf(t, a, stderr, "use", "--unset")
-	if code := a.run([]string{"show"}); code == 0 {
+	if code := a.run(t.Context(), []string{"show"}); code == 0 {
 		t.Fatal("exit code = 0; after --unset, two tricounts followed must mean asking again")
 	}
 }
 
 func TestUseRefusesAnUnknownTricount(t *testing.T) {
 	a, _, stderr := twoTricountApp(t)
-	if code := a.run([]string{"use", "Nonesuch"}); code == 0 {
+	if code := a.run(t.Context(), []string{"use", "Nonesuch"}); code == 0 {
 		t.Fatal("exit code = 0, want non-zero for a tricount that is not followed")
 	}
 	if !strings.Contains(stderr.String(), "Nonesuch") {

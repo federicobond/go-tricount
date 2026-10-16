@@ -62,7 +62,7 @@ func (a *app) unsetCurrent() error {
 	return err
 }
 
-func (a *app) use(args []string) error {
+func (a *app) use(ctx context.Context, args []string) error {
 	fs := a.flags("use")
 	unset := fs.Bool("unset", false, "forget the current tricount")
 	if err := fs.Parse(args); err != nil {
@@ -86,7 +86,6 @@ func (a *app) use(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 
 	if fs.NArg() == 0 {
 		t, err := a.currentTricount(ctx, c)

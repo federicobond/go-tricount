@@ -172,7 +172,7 @@ func TestJoinAsExistingMemberLinksWithoutCreating(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
 	before := len(f.members)
 
-	if code := a.run([]string{"join", "--as", "Bob", "tABC123xyz"}); code != 0 {
+	if code := a.run(t.Context(), []string{"join", "--as", "Bob", "tABC123xyz"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	if len(f.members) != before {
@@ -187,7 +187,7 @@ func TestJoinAsExistingMemberLinksWithoutCreating(t *testing.T) {
 func TestJoinAsNewMemberCreatesThenLinks(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
 
-	if code := a.run([]string{"join", "--as", "Carol", "tABC123xyz"}); code != 0 {
+	if code := a.run(t.Context(), []string{"join", "--as", "Carol", "tABC123xyz"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	carol, ok := f.memberNamed("Carol")
@@ -205,7 +205,7 @@ func TestJoinAsNewMemberCreatesThenLinks(t *testing.T) {
 func TestLinkCreateMakesTheMember(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
 
-	if code := a.run([]string{"link", "--create", fmt.Sprint(fakeTricountID), "Dave"}); code != 0 {
+	if code := a.run(t.Context(), []string{"link", "--create", fmt.Sprint(fakeTricountID), "Dave"}); code != 0 {
 		t.Fatalf("exit code = %d, stderr = %q", code, stderr.String())
 	}
 	dave, ok := f.memberNamed("Dave")
@@ -221,7 +221,7 @@ func TestLinkWithoutCreateStillRefusesUnknownMember(t *testing.T) {
 	a, f, stderr := newFakeApp(t)
 	before := len(f.members)
 
-	if code := a.run([]string{"link", fmt.Sprint(fakeTricountID), "Dave"}); code == 0 {
+	if code := a.run(t.Context(), []string{"link", fmt.Sprint(fakeTricountID), "Dave"}); code == 0 {
 		t.Fatal("exit code = 0; without --create an unknown member must fail")
 	}
 	if len(f.members) != before {
@@ -237,7 +237,7 @@ func stdoutOf(t *testing.T, a *app, stderr *strings.Builder, args ...string) str
 	t.Helper()
 	buf := &strings.Builder{}
 	a.stdout = buf
-	if code := a.run(args); code != 0 {
+	if code := a.run(t.Context(), args); code != 0 {
 		t.Fatalf("%v: exit code = %d, stderr = %q", args, code, stderr.String())
 	}
 	return buf.String()

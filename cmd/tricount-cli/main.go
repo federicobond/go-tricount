@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"text/tabwriter"
 
 	tricount "github.com/federicobond/go-tricount"
@@ -47,8 +49,12 @@ type app struct {
 }
 
 func main() {
+	// Ctrl-C or a TERM cancels the request in flight, so a hung API call
+	// ends with an error rather than a kill.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	a := &app{stdout: os.Stdout, stderr: os.Stderr, credPath: defaultCredentialsPath()}
-	os.Exit(a.run(os.Args[1:]))
+	os.Exit(a.run(ctx, os.Args[1:]))
 }
 
 // defaultCredentialsPath is credentials.json under the OS config directory,
@@ -64,36 +70,36 @@ func defaultCredentialsPath() string {
 	return filepath.Join(dir, "tricount", "credentials.json")
 }
 
-func (a *app) run(args []string) int {
+func (a *app) run(ctx context.Context, args []string) int {
 	if len(args) == 0 {
 		a.usage()
 		return exitUsage
 	}
 	switch args[0] {
 	case "list":
-		return a.status(a.list(args[1:]))
+		return a.status(a.list(ctx, args[1:]))
 	case "show":
-		return a.status(a.show(args[1:]))
+		return a.status(a.show(ctx, args[1:]))
 	case "balances":
-		return a.status(a.balances(args[1:]))
+		return a.status(a.balances(ctx, args[1:]))
 	case "settle":
-		return a.status(a.settle(args[1:]))
+		return a.status(a.settle(ctx, args[1:]))
 	case "join":
-		return a.status(a.join(args[1:]))
+		return a.status(a.join(ctx, args[1:]))
 	case "leave":
-		return a.status(a.leave(args[1:]))
+		return a.status(a.leave(ctx, args[1:]))
 	case "link":
-		return a.status(a.link(args[1:]))
+		return a.status(a.link(ctx, args[1:]))
 	case "whoami":
-		return a.status(a.whoami(args[1:]))
+		return a.status(a.whoami(ctx, args[1:]))
 	case "add":
-		return a.status(a.add(args[1:]))
+		return a.status(a.add(ctx, args[1:]))
 	case "pay":
-		return a.status(a.pay(args[1:]))
+		return a.status(a.pay(ctx, args[1:]))
 	case "remove":
-		return a.status(a.remove(args[1:]))
+		return a.status(a.remove(ctx, args[1:]))
 	case "use":
-		return a.status(a.use(args[1:]))
+		return a.status(a.use(ctx, args[1:]))
 	default:
 		fmt.Fprintf(a.stderr, "unknown command %q\n", args[0])
 		a.usage()
@@ -174,7 +180,7 @@ func (a *app) clientAndCredentials() (*tricount.Client, tricount.Credentials, er
 	return tricount.NewClient(creds, a.opts...), creds, nil
 }
 
-func (a *app) list(args []string) error {
+func (a *app) list(ctx context.Context, args []string) error {
 	fs := a.flags("list")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -184,7 +190,7 @@ func (a *app) list(args []string) error {
 	if err != nil {
 		return err
 	}
-	all, err := c.ListTricounts(context.Background())
+	all, err := c.ListTricounts(ctx)
 	if err != nil {
 		return err
 	}
@@ -217,7 +223,7 @@ func (a *app) list(args []string) error {
 
 // tricountArg parses the optional tricount these commands take, an id or a
 // title, and fetches it; left out, it is the only tricount followed.
-func (a *app) tricountArg(name string, args []string) (*tricount.Tricount, error) {
+func (a *app) tricountArg(ctx context.Context, name string, args []string) (*tricount.Tricount, error) {
 	fs := a.flags(name)
 	if err := fs.Parse(args); err != nil {
 		return nil, err
@@ -229,11 +235,11 @@ func (a *app) tricountArg(name string, args []string) (*tricount.Tricount, error
 	if err != nil {
 		return nil, err
 	}
-	return a.resolveTricount(context.Background(), c, fs.Arg(0))
+	return a.resolveTricount(ctx, c, fs.Arg(0))
 }
 
-func (a *app) show(args []string) error {
-	t, err := a.tricountArg("show", args)
+func (a *app) show(ctx context.Context, args []string) error {
+	t, err := a.tricountArg(ctx, "show", args)
 	if err != nil {
 		return err
 	}
@@ -315,8 +321,8 @@ func splitColumns(t *tricount.Tricount) []*tricount.Member {
 	return columns
 }
 
-func (a *app) balances(args []string) error {
-	t, err := a.tricountArg("balances", args)
+func (a *app) balances(ctx context.Context, args []string) error {
+	t, err := a.tricountArg(ctx, "balances", args)
 	if err != nil {
 		return err
 	}
@@ -343,8 +349,8 @@ func (a *app) balances(args []string) error {
 	return w.Flush()
 }
 
-func (a *app) settle(args []string) error {
-	t, err := a.tricountArg("settle", args)
+func (a *app) settle(ctx context.Context, args []string) error {
+	t, err := a.tricountArg(ctx, "settle", args)
 	if err != nil {
 		return err
 	}
@@ -377,7 +383,7 @@ func (a *app) settle(args []string) error {
 	return w.Flush()
 }
 
-func (a *app) join(args []string) error {
+func (a *app) join(ctx context.Context, args []string) error {
 	fs := a.flags("join")
 	as := fs.String("as", "", "the member this device counts as, created if absent")
 	if err := fs.Parse(args); err != nil {
@@ -391,7 +397,6 @@ func (a *app) join(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	t, err := c.JoinTricount(ctx, fs.Arg(0))
 	if err != nil {
 		return err
@@ -425,8 +430,8 @@ func (a *app) join(args []string) error {
 	return nil
 }
 
-func (a *app) leave(args []string) error {
-	t, err := a.tricountArg("leave", args)
+func (a *app) leave(ctx context.Context, args []string) error {
+	t, err := a.tricountArg(ctx, "leave", args)
 	if err != nil {
 		return err
 	}
@@ -434,7 +439,7 @@ func (a *app) leave(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := c.LeaveTricount(context.Background(), t); err != nil {
+	if err := c.LeaveTricount(ctx, t); err != nil {
 		return err
 	}
 	if a.jsonOut {
@@ -497,7 +502,7 @@ func memberFor(ctx context.Context, c *tricount.Client, t *tricount.Tricount, na
 	return resolveMember(t, name)
 }
 
-func (a *app) link(args []string) error {
+func (a *app) link(ctx context.Context, args []string) error {
 	fs := a.flags("link")
 	create := fs.Bool("create", false, "add the member if no one by that name exists")
 	if err := fs.Parse(args); err != nil {
@@ -516,7 +521,6 @@ func (a *app) link(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	t, err := a.resolveTricount(ctx, c, selector)
 	if err != nil {
 		return err
@@ -535,7 +539,7 @@ func (a *app) link(args []string) error {
 	return nil
 }
 
-func (a *app) whoami(args []string) error {
+func (a *app) whoami(ctx context.Context, args []string) error {
 	fs := a.flags("whoami")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -545,7 +549,6 @@ func (a *app) whoami(args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
 	userID, err := c.Authenticate(ctx)
 	if err != nil {
 		return err
