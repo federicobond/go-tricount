@@ -24,6 +24,12 @@ type fakeAPI struct {
 	members []fakeMember
 	linked  string
 	puts    []map[string]any
+
+	// entries are the registry-entry bodies POSTed; deletes the DELETE paths.
+	entries []map[string]any
+	deletes []string
+	// extra is a second registry the list returns, when set.
+	extra string
 }
 
 // registryObject is the bare registry, which the sync response embeds and the
@@ -49,9 +55,22 @@ func (f *fakeAPI) registryJSON() string {
 	return `{"Response":[{"Registry":` + f.registryObject() + `}]}`
 }
 
+// listJSON is the collection endpoint: the registry, plus extra when set.
+func (f *fakeAPI) listJSON() string {
+	items := `{"Registry":` + f.registryObject() + `}`
+	if f.extra != "" {
+		items += `,{"Registry":` + f.extra + `}`
+	}
+	return `{"Response":[` + items + `]}`
+}
+
 func (f *fakeAPI) syncJSON() string {
+	active := f.registryObject()
+	if f.extra != "" {
+		active += "," + f.extra
+	}
 	return `{"Response":[{"RegistrySynchronization":{"all_registry_active":[` +
-		f.registryObject() + `],"all_registry_archived":[]}}]}`
+		active + `],"all_registry_archived":[]}}]}`
 }
 
 func (f *fakeAPI) membershipsJSON() string {
@@ -71,6 +90,19 @@ func (f *fakeAPI) handle(w http.ResponseWriter, r *http.Request) {
 
 	case strings.HasSuffix(r.URL.Path, "/registry-membership"):
 		w.Write([]byte(f.membershipsJSON()))
+
+	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/registry-entry"):
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		f.entries = append(f.entries, body)
+		w.Write([]byte(`{"Response":[{"Id":{"id":555000111}}]}`))
+
+	case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/registry"):
+		w.Write([]byte(f.listJSON()))
+
+	case r.Method == http.MethodDelete:
+		f.deletes = append(f.deletes, r.URL.Path)
+		w.Write([]byte(`{"Response":[]}`))
 
 	case r.Method == http.MethodPut:
 		var body map[string]any

@@ -10,6 +10,7 @@
 // Usage:
 //
 //	tricount-cli list
+//	tricount-cli add 80.00 "Internet" --split Ana=2,Luis=1
 package main
 
 import (
@@ -86,6 +87,12 @@ func (a *app) run(args []string) int {
 		return a.status(a.link(args[1:]))
 	case "whoami":
 		return a.status(a.whoami(args[1:]))
+	case "add":
+		return a.status(a.add(args[1:]))
+	case "pay":
+		return a.status(a.pay(args[1:]))
+	case "remove":
+		return a.status(a.remove(args[1:]))
 	default:
 		fmt.Fprintf(a.stderr, "unknown command %q\n", args[0])
 		a.usage()
@@ -106,6 +113,15 @@ commands:
   leave <id>        stop following a tricount
   link <id> <name>  set which member this device counts as, --create to add them
   whoami            this device's identity and its member in each tricount
+
+  add <amount> <description>
+                    an expense; --paid-by, --on, --category, --uuid,
+                    --split <names | name=shares,...> or --exact <name=amount,...>
+  pay <amount> --to <member>
+                    a reimbursement; --from defaults to you
+  remove <transaction-id>
+
+Writes go to the one tricount followed; with several, --in <id or title>.
 `)
 }
 

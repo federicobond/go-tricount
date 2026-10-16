@@ -65,11 +65,32 @@ tricount-cli link --create <id> <name>   # ... adding them if they do not exist
 tricount-cli whoami              # this device's identity and its links
 ```
 
+Three commands write:
+
+```
+tricount-cli add 80.00 "Internet"            # paid by you, split equally
+tricount-cli add 80.00 "Internet" --split Ana=2,Luis=1 --paid-by Ana
+tricount-cli add 41.30 "Lunch" --exact Ana=17.80,Luis=23.50 --on 2026-10-10
+tricount-cli pay 26.67 --to Ana --from Luis  # a reimbursement
+tricount-cli remove 2106922472               # by the id add and pay print
+```
+
+`--split` takes names, for an equal split among them, or `name=shares` pairs
+for a ratio. `--exact` takes `name=amount` pairs that sum to the total.
+`--category` becomes an app category when it names one (`groceries`,
+`Food & Drink`), else the custom label the app shows. `--uuid` makes a retry
+safe; see the idempotency note below.
+
+They write to the one tricount the device follows. With several, say which
+with `--in`, by id or title. There is no "current" tricount to switch and
+forget.
+
 Every command takes `--json`. Read commands emit their data; the ones that
 change something emit what they acted on, so `join --json` gives you the
-tricount and `link --json` the member. Keys are snake_case throughout,
-matching the API's own convention and what the library's types marshal to.
-Amounts encode as strings, so exact decimals survive a trip through `jq`.
+tricount, `link --json` the member, and `add --json` the new transaction's
+id. Keys are snake_case throughout, matching the API's own convention and
+what the library's types marshal to. Amounts encode as strings, so exact
+decimals survive a trip through `jq`.
 Errors stay plain text on stderr — the exit code is the contract.
 
 The device identity is created on first use in your OS config directory —
