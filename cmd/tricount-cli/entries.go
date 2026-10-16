@@ -37,7 +37,7 @@ func parseSplit(t *tricount.Tricount, spec string) (tricount.Split, error) {
 	}
 	var members []*tricount.Member
 	var shares []tricount.MemberShare
-	for _, item := range strings.Split(spec, ",") {
+	for item := range strings.SplitSeq(spec, ",") {
 		name, value, hasValue := strings.Cut(strings.TrimSpace(item), "=")
 		m, err := resolveMember(t, name)
 		if err != nil {
@@ -66,7 +66,7 @@ func parseSplit(t *tricount.Tricount, spec string) (tricount.Split, error) {
 // The library checks that they sum to the total.
 func parseExact(t *tricount.Tricount, spec string) (tricount.Split, error) {
 	var amounts []tricount.MemberAmount
-	for _, item := range strings.Split(spec, ",") {
+	for item := range strings.SplitSeq(spec, ",") {
 		name, value, hasValue := strings.Cut(strings.TrimSpace(item), "=")
 		if !hasValue {
 			return tricount.Split{}, fmt.Errorf("--exact %s: every member needs an amount, as in %s=17.80", item, name)
