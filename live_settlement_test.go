@@ -36,8 +36,7 @@ func TestLiveSettlementProbe(t *testing.T) {
 
 	id, err := c.CreateSettlement(ctx, reread)
 	if err != nil {
-		var apiErr *Error
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := errors.AsType[*Error](err); ok {
 			t.Logf("PROBE RESULT: CreateSettlement is unavailable — http %d: %s",
 				apiErr.StatusCode, apiErr.Description)
 		} else {

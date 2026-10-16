@@ -254,8 +254,7 @@ func Example_handlingErrors() {
 	case errors.Is(err, tricount.ErrInvalidRequest):
 		fmt.Println("the request was wrong before it was sent:", err)
 	case err != nil:
-		var apiErr *tricount.Error
-		if errors.As(err, &apiErr) {
+		if apiErr, ok := errors.AsType[*tricount.Error](err); ok {
 			fmt.Printf("api error %d: %s (response %s)\n",
 				apiErr.StatusCode, apiErr.Description, apiErr.ResponseID)
 		}

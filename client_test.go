@@ -232,8 +232,7 @@ func TestQueryAndErrorPropagation(t *testing.T) {
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
-	var apiErr *Error
-	if !errors.As(err, &apiErr) || apiErr.Description != "Registry not found" {
+	if apiErr, ok := errors.AsType[*Error](err); !ok || apiErr.Description != "Registry not found" {
 		t.Errorf("err = %#v, want the description preserved", err)
 	}
 	if gotQuery != "public_identifier_token=tABC123" {
