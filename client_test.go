@@ -196,14 +196,12 @@ func TestConcurrentCallsRegisterOnce(t *testing.T) {
 
 	c := NewClient(testCredentials(), WithBaseURL(srv.URL))
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 50 {
+		wg.Go(func() {
 			if _, err := c.do(context.Background(), request{method: http.MethodGet, userPath: "/registry"}); err != nil {
 				t.Errorf("do: %v", err)
 			}
-		}()
+		})
 	}
 	wg.Wait()
 
