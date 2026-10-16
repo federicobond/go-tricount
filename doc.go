@@ -51,7 +51,14 @@
 // Setting an entry's UUID makes the create idempotent: the API keeps the UUID
 // it is given and a repeat returns the original entry's ID rather than a
 // duplicate, so a caller that derives the UUID from what it is recording can
-// retry without writing twice. The first write wins. See CreateExpense.
+// retry without writing twice. The first write wins.
+//
+// That holds within one tricount. An entry UUID is unique beyond it: sending
+// one that was used in another tricount fails with 400 "RegistryEntry with
+// uuid ... already exists", even when that tricount was archived or the
+// transaction deleted. Derive keys from the tricount as well as from what is
+// being recorded, or the same thing can only ever be recorded once, anywhere.
+// See CreateExpense.
 //
 // # Sessions are implicit
 //
@@ -85,4 +92,8 @@
 // endpoints accept an upload and return a UUID but never list anything; use
 // transaction attachments instead. Both are described on the methods
 // themselves.
+//
+// Destroying a tricount is a third: DeleteTricount reports success but the
+// tricount survives, readable and writable through its sharing token. See
+// DeleteTricount.
 package tricount

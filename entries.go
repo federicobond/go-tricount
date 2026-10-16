@@ -116,6 +116,13 @@ func (i Income) spec() entrySpec {
 // duplicate. The first write wins — a repeat with different content is
 // ignored, not applied, so noticing a changed amount means reading and
 // comparing. Undocumented; asserted by TestLiveEntryUUIDIsIdempotencyKey.
+//
+// A UUID is spent for good, and beyond the tricount it was used in. Sending
+// one that another tricount has used fails with 400 "RegistryEntry with uuid
+// ... already exists", and deleting the transaction or archiving that
+// tricount does not release it. A caller deriving UUIDs from what it records
+// should mix in the tricount's id, so the same thing can still be recorded in
+// a second tricount.
 func (c *Client) CreateExpense(ctx context.Context, t *Tricount, e Expense) (int64, error) {
 	return c.createEntry(ctx, t, e.spec())
 }

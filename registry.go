@@ -27,7 +27,12 @@ func (c *Client) GetTricount(ctx context.Context, publicToken string) (*Tricount
 	return nil, fmt.Errorf("tricount with token %q: %w", publicToken, ErrNotFound)
 }
 
-// GetTricountByID fetches a tricount this device already has access to.
+// GetTricountByID fetches a tricount this device already follows.
+//
+// Following is what the id resolves against: a device that has not joined the
+// tricount gets ErrNotFound from this method even though GetTricount finds it
+// by sharing token, and a freshly registered device follows nothing. Use
+// GetTricount, or JoinTricount first.
 //
 // The id goes in the path. As a query parameter on the collection the API
 // ignores it and returns every registry the device follows, which silently
@@ -178,9 +183,23 @@ func (c *Client) setStatus(ctx context.Context, t *Tricount, status TricountStat
 	return nil
 }
 
-// DeleteTricount permanently deletes the tricount for everyone who has it,
-// not just this device. To stop following a tricount without destroying it,
-// use LeaveTricount.
+// DeleteTricount asks the API to delete the tricount. It does not destroy it.
+//
+// The call succeeds and the tricount's status becomes READ_ONLY — the same
+// state ArchiveTricount produces — but it stays readable, and writable again
+// later, through its sharing token. Observed against the live API from the
+// device that created the tricount and from another device holding only the
+// link; both then saw READ_ONLY, so the state is the tricount's and not one
+// viewer's. It is not final either: a tricount archived this way was
+// READ_WRITE again after its owner used it in the phone app.
+//
+// Deleting a tricount in the Tricount app is no stronger: it removes the
+// tricount from that user's list, while the sharing link still opens it
+// READ_WRITE from another device.
+//
+// So there is no known way to destroy a tricount or to revoke a sharing
+// token. Treat a token as permanent access to the data. To stop following a
+// tricount on this device, use LeaveTricount.
 func (c *Client) DeleteTricount(ctx context.Context, t *Tricount) error {
 	if err := checkTricount(t); err != nil {
 		return err

@@ -108,6 +108,23 @@ a caller that derives the UUID from what it is recording can retry without
 writing twice. The first write wins: a repeat with different content is ignored.
 Verified against the live API, not assumed.
 
+**An entry UUID is spent for good.** That idempotency holds inside one
+tricount. Reuse a UUID in a *different* tricount and the create fails with
+`400 RegistryEntry with uuid ... already exists` — deleting the transaction or
+archiving the tricount does not release it. Derive keys from the tricount's id
+as well as from what you are recording, or a given bill (or invoice, or
+booking) can only ever be recorded in one tricount, forever.
+
+**A tricount cannot be destroyed, and a sharing token cannot be revoked.**
+`DeleteTricount` returns success and leaves the tricount readable through its
+sharing token, with its status set to `READ_ONLY` — indistinguishable from
+`ArchiveTricount`. Both the creating device and a device holding only the link
+then see `READ_ONLY`, so that state belongs to the tricount rather than to a
+viewer, and it is not final: one archived this way was `READ_WRITE` again
+after its owner used it in the phone app. Deleting a tricount in the app only
+removes it from that user's list; the link still opens it `READ_WRITE`
+elsewhere. Treat a sharing token as permanent access to the data.
+
 **The public types marshal as snake_case.** `Tricount`, `Member`,
 `Transaction` and the rest carry JSON tags following the API's convention, so
 `json.Marshal` on a tricount gives you `display_name` rather than
@@ -122,6 +139,12 @@ re-registers once on a 401. `Client` is safe for concurrent use.
 exact amounts that do not sum to the total, an amount in the wrong currency —
 all rejected locally with an error that says what is wrong, because the API's
 own rejections are opaque strings like `"superfluous field"`.
+
+**`GetTricountByID` only sees what this device follows.** The id resolves
+against the device's own list, so a device that has not joined gets
+`ErrNotFound` from it while `GetTricount` finds the same tricount by sharing
+token. A freshly registered device follows nothing, so "not found by id" never
+means "deleted".
 
 **Linking is per-device.** `LinkToMember` sets which member *this* device
 counts as. Two devices following the same tricount hold independent links, so
@@ -151,7 +174,8 @@ comment.
 |---|---|
 | Device registration and sessions | yes |
 | Read a tricount by sharing token or ID; list all | yes |
-| Create, update, archive, unarchive, delete a tricount | yes |
+| Create, update, archive, unarchive a tricount | yes |
+| Delete a tricount | archives it only, see above |
 | Join, sync, leave | yes |
 | Add, rename, delete, link members | yes |
 | Expenses, income, reimbursements | yes |
