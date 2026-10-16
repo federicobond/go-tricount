@@ -29,10 +29,30 @@ func parseMixed(fs *flag.FlagSet, args []string) ([]string, error) {
 	}
 }
 
-// resolveTricount picks the tricount a write goes to: by id if the selector
-// is a number, by title otherwise, or the only tricount followed when it is
-// empty. Archived tricounts count as followed, so two of any kind means ask.
-func resolveTricount(ctx context.Context, c *tricount.Client, selector string) (*tricount.Tricount, error) {
+// resolveTricount picks the tricount a command acts on: the selector when
+// given, else the one set by `use`, else the only tricount followed.
+func (a *app) resolveTricount(ctx context.Context, c *tricount.Client, selector string) (*tricount.Tricount, error) {
+	if selector == "" {
+		id, err := a.current()
+		if err != nil {
+			return nil, err
+		}
+		if id != 0 {
+			t, err := c.GetTricountByID(ctx, id)
+			if err != nil {
+				return nil, fmt.Errorf("the current tricount, %d, is not followed any more; `tricount-cli use --unset` or pick another: %w", id, err)
+			}
+			return t, nil
+		}
+	}
+	return a.resolveFollowed(ctx, c, selector)
+}
+
+// resolveFollowed resolves a selector against what the device follows: by id
+// if it is a number, by title otherwise, or the only tricount followed when
+// it is empty. Archived tricounts count as followed, so two of any kind
+// means ask.
+func (a *app) resolveFollowed(ctx context.Context, c *tricount.Client, selector string) (*tricount.Tricount, error) {
 	if id, err := strconv.ParseInt(selector, 10, 64); err == nil {
 		return c.GetTricountByID(ctx, id)
 	}
@@ -60,7 +80,7 @@ func resolveTricount(ctx context.Context, c *tricount.Client, selector string) (
 		names = append(names, fmt.Sprintf("%d %s", t.ID, t.Title))
 	}
 	if selector == "" {
-		return nil, fmt.Errorf("this device follows %d tricounts; name one by id or title: %s",
+		return nil, fmt.Errorf("this device follows %d tricounts; name one by id or title, or `tricount-cli use` one: %s",
 			len(matches), strings.Join(names, ", "))
 	}
 	return nil, fmt.Errorf("%q names %d tricounts; use the id instead: %s",
@@ -182,7 +202,7 @@ func (a *app) add(args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	t, err := resolveTricount(ctx, c, *in)
+	t, err := a.resolveTricount(ctx, c, *in)
 	if err != nil {
 		return err
 	}
@@ -252,7 +272,7 @@ func (a *app) pay(args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	t, err := resolveTricount(ctx, c, *in)
+	t, err := a.resolveTricount(ctx, c, *in)
 	if err != nil {
 		return err
 	}
@@ -313,7 +333,7 @@ func (a *app) remove(args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	t, err := resolveTricount(ctx, c, *in)
+	t, err := a.resolveTricount(ctx, c, *in)
 	if err != nil {
 		return err
 	}

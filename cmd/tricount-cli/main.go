@@ -92,6 +92,8 @@ func (a *app) run(args []string) int {
 		return a.status(a.pay(args[1:]))
 	case "remove":
 		return a.status(a.remove(args[1:]))
+	case "use":
+		return a.status(a.use(args[1:]))
 	default:
 		fmt.Fprintf(a.stderr, "unknown command %q\n", args[0])
 		a.usage()
@@ -119,10 +121,12 @@ commands:
   pay <amount> --to <member>
                     a reimbursement; --from defaults to you
   remove <transaction-id>
+  use <tricount>    make a tricount the default for every command; use alone
+                    shows it, --unset forgets it
 
-Commands act on the one tricount followed. With several, name it: an id or
-title before the arguments of show, balances, settle, leave and link, or
---in <id or title> on add, pay and remove.
+Commands act on the one tricount followed, or the one set by use. To name
+another: an id or title before the arguments of show, balances, settle, leave
+and link, or --in <id or title> on add, pay and remove.
 `)
 }
 
@@ -225,7 +229,7 @@ func (a *app) tricountArg(name string, args []string) (*tricount.Tricount, error
 	if err != nil {
 		return nil, err
 	}
-	return resolveTricount(context.Background(), c, fs.Arg(0))
+	return a.resolveTricount(context.Background(), c, fs.Arg(0))
 }
 
 func (a *app) show(args []string) error {
@@ -513,7 +517,7 @@ func (a *app) link(args []string) error {
 		return err
 	}
 	ctx := context.Background()
-	t, err := resolveTricount(ctx, c, selector)
+	t, err := a.resolveTricount(ctx, c, selector)
 	if err != nil {
 		return err
 	}

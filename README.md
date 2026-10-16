@@ -66,7 +66,16 @@ tricount-cli whoami              # this device's identity and its links
 ```
 
 Each acts on the one tricount the device follows. With several, put its id
-or title first: `tricount-cli balances 102257091`, `tricount-cli show Flat`.
+or title first, `tricount-cli show Flat`, or set a default once:
+
+```
+tricount-cli use Flat            # every command now means Flat
+tricount-cli use                 # which one is current
+tricount-cli use --unset         # back to needing a name
+```
+
+An explicit id or title always wins over `use`. The setting lives in a file
+beside `credentials.json`, per device.
 
 Three commands write:
 
@@ -85,8 +94,7 @@ for a ratio. `--exact` takes `name=amount` pairs that sum to the total.
 safe; see the idempotency note below.
 
 These pick the tricount the same way, but their positionals are taken, so
-with several followed the id or title goes in `--in`. There is no "current"
-tricount to switch and forget.
+naming one goes in `--in`.
 
 Every command takes `--json`. Read commands emit their data; the ones that
 change something emit what they acted on, so `join --json` gives you the
